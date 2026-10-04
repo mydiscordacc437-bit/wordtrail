@@ -399,6 +399,18 @@ assert.equal(value('state.academyClass'), 8);
 click({ view: 'games' });
 assert.equal(value('state.view'), 'games', 'Academy returns to the existing practice navigation without altering it');
 
+// The optional skill suggestion uses prior attempts, never locks other activities.
+value("state.progress.gameStats.phrase = { answered: 5, correct: 1 }; state.progress.gameStats.listen = { answered: 5, correct: 4 }; render()");
+click({ view: 'games' });
+assert.match(main.innerHTML, /Want another try at Phrase Finder/);
+assert.match(main.innerHTML, /data-action="start-mini" data-game="phrase"/);
+assert.match(main.innerHTML, /data-game="listen"/, 'All other games remain available');
+click({ action: 'start-mini', data: { game: 'phrase' } });
+assert.equal(value('state.miniSession.mode'), 'phrase');
+value("state.progress.gameStats.phrase = { answered: 0, correct: 0 }; state.progress.gameStats.listen = { answered: 0, correct: 0 }");
+click({ view: 'games' });
+assert.doesNotMatch(main.innerHTML, /Want another try at/);
+
 // Practice choices identify their learning goal and include short stories/listening.
 assert.match(main.innerHTML, /What would you like to practice/);
 assert.match(main.innerHTML, /YOU’LL PRACTICE/);
@@ -473,6 +485,39 @@ clickMiniAnswer(value('currentMiniRound().answer'));
 nextMini();
 assert.equal(value('state.view'), 'mini-summary');
 assert.equal(value('state.progress.missedIds.includes(QUESTION_BY_ID[state.miniSession.rounds[0].wordId].id)'), false);
+
+// A due word earns a recall turn; expired streaks display as zero before the next session.
+assert.equal(value("currentPracticeStreak({ lastPlayed: '2000-01-01', streak: 12 })"), 0);
+assert.equal(value("currentPracticeStreak({ lastPlayed: todayKey(), streak: 3 })"), 3);
+assert.equal(value("currentPracticeStreak({ lastPlayed: previousDayKey(), streak: 3 })"), 3);
+const streakCases = value(`(() => {
+  const original = state.progress;
+  const test = (lastPlayed, streak, dates) => {
+    state.progress = { ...original, lastPlayed, streak, practiceDates: dates, gameRuns: {} };
+    markPracticeDay('daily');
+    const first = state.progress.streak;
+    markPracticeDay('daily');
+    return [first, state.progress.streak, state.progress.practiceDates.length];
+  };
+  try { return {
+    continuation: test(previousDayKey(), 3, [previousDayKey()]),
+    restart: test('2000-01-01', 20, ['2000-01-01']),
+    sameDay: test(todayKey(), 4, [todayKey()])
+  }; } finally { state.progress = original; saveProgress(); }
+})()`);
+assert.equal(streakCases.continuation.join(','), '4,4,2', 'Yesterday extends streak once, not twice');
+assert.equal(streakCases.restart.join(','), '1,1,2', 'A missed day restarts the counter without deleting progress');
+assert.equal(streakCases.sameDay.join(','), '4,4,1', 'Same-day practice does not inflate the counter');
+
+value("state.progress.reviewSchedule.quiet = { stage: 0, dueAt: 1, correctCount: 0, lapses: 0, lastReviewedAt: null }");
+click({ action: 'start-daily-mix' });
+assert.equal(value("state.miniSession.rounds.filter(round => round.type === 'recall' && round.wordId === 'quiet').length"), 1, 'Due word appears exactly once as a retrieval turn');
+assert.equal(value("new Set(state.miniSession.rounds.map(round => round.type)).size"), 4);
+assert.equal(value("new Set(state.miniSession.rounds.map(round => round.wordId).filter(Boolean)).size"), value("state.miniSession.rounds.filter(round => round.wordId).length"), 'A due word does not appear twice in the sampler');
+value("delete state.progress.reviewSchedule.quiet; state.progress.level = 'beginner'; state.progress.reviewSchedule.diplomatic = { stage: 0, dueAt: 1, correctCount: 0, lapses: 0, lastReviewedAt: null }");
+click({ action: 'start-daily-mix' });
+assert.equal(value("state.miniSession.rounds.some(round => round.wordId === 'diplomatic')"), false, 'Beginner samplers do not force stretch review');
+value("delete state.progress.reviewSchedule.diplomatic; state.progress.level = 'intermediate'");
 
 // Phrase practice, four-part sampler, listening, and short stories all complete.
 finishMiniGame('phrase');
@@ -794,7 +839,9 @@ assert.equal(value('state.progress.accent'), 'en-US');
 
   await value(`readProgressImport({ size: ${backupText.length}, text: () => Promise.resolve(${JSON.stringify(backupText)}) })`);
   store.set(value('SESSION_STORAGE_KEY'), 'stale active round');
+  store.set(value('practiceHistoryKey()'), JSON.stringify({ synonym: ['syn-safe'] }));
   click({ action: 'confirm-progress-import' });
+  assert.equal(store.has(value('practiceHistoryKey()')), false, 'Restoring a different profile resets old question rotation');
   assert.equal(value('state.progress.totalAnswered'), 7);
   assert.equal(value('state.progress.totalCorrect'), 5);
   assert.equal(value('state.progress.level'), 'advanced');

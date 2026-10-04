@@ -139,7 +139,7 @@ export async function syncGuestSnapshot(userId, username, progress) {
   const newestDate = remoteDate && guestDate ? (remoteDate > guestDate ? remoteDate : guestDate) : remoteDate || guestDate;
   await upsertProfile(userId, {
     username: username || remote.profile && remote.profile.username || '',
-    streakCount: Math.max(remoteStreak, guestStreak),
+    streakCount: remoteDate === guestDate ? Math.max(remoteStreak, guestStreak) : newestDate === remoteDate ? remoteStreak : guestStreak,
     lastActiveDate: newestDate,
     englishLevel: snapshot.level || remote.profile && remote.profile.english_level,
     uiLanguage: hasGuestSetup ? snapshot.uiLanguage : remote.profile && remote.profile.ui_language,

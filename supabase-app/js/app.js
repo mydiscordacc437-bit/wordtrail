@@ -617,6 +617,7 @@ import { ACADEMY_CONTENT } from './academy-data.js';
       state.miniSession = null;
       state.toneSession = null;
       saveProgress();
+      resetPracticeHistory();
       state.view = 'wordbook';
       render();
       showToast('Backup restored. Your previous browser progress was replaced.');
@@ -828,13 +829,17 @@ import { ACADEMY_CONTENT } from './academy-data.js';
       const unscheduledMisses = state.progress.missedIds.filter(id => !schedule[id]);
       return [...new Set([...unscheduledMisses, ...scheduled])];
     }
+    // The displayed streak expires after a missed calendar day; stored history remains intact.
+    function currentPracticeStreak(progress = state.progress) {
+      return progress.lastPlayed === todayKey() || progress.lastPlayed === previousDayKey() ? progress.streak : 0;
+    }
     function markPracticeDay(gameType = 'scene') {
       const progress = state.progress;
       if (!progress.gameRuns) progress.gameRuns = {};
       progress.gameRuns[gameType] = (progress.gameRuns[gameType] || 0) + 1;
       const today = todayKey();
       if (!progress.practiceDates.includes(today)) {
-        if (progress.lastPlayed !== today) progress.streak = progress.lastPlayed === previousDayKey() ? progress.streak + 1 : 1;
+        if (progress.lastPlayed !== today) progress.streak = progress.lastPlayed === previousDayKey() ? currentPracticeStreak(progress) + 1 : 1;
         progress.lastPlayed = today;
         progress.practiceDates = [...new Set([...progress.practiceDates, today])].slice(-60);
       }
@@ -1054,6 +1059,11 @@ import { ACADEMY_CONTENT } from './academy-data.js';
       } catch (error) { /* Invalid or unavailable browser storage is ignored. */ }
       return practiceHistoryMemory.get(key) || Object.create(null);
     }
+    function resetPracticeHistory() {
+      const key = practiceHistoryKey();
+      practiceHistoryMemory.delete(key);
+      try { localStorage.removeItem(key); } catch (error) { /* In-memory rotation is also reset. */ }
+    }
     function rotatePractice(items, count, mode, weightOf = () => 1) {
       const pool = shuffled(items);
       const history = readPracticeHistory();
@@ -1082,8 +1092,10 @@ import { ACADEMY_CONTENT } from './academy-data.js';
       return candidate.map(key => byKey.get(key));
     }
     function optionKeys(options, keyOf = value => value) { return options.map(keyOf); }
-    function sampleForLevel(source, count, level = state.progress.level, mode = 'scene') {
-      const available = questionPoolForLevel(source, level);
+    function sampleForLevel(source, count, level = state.progress.level, mode = 'scene', excluded = []) {
+      const eligible = questionPoolForLevel(source, level);
+      const fresh = eligible.filter(question => !excluded.includes(question.id));
+      const available = fresh.length >= count ? fresh : eligible;
       const stretchWeight = level === 'advanced' ? 6 : level === 'intermediate' ? 2 : 1;
       return rotatePractice(available, count, mode, item => item.band === 'Stretch' ? stretchWeight : 1);
     }
@@ -1169,23 +1181,33 @@ import { ACADEMY_CONTENT } from './academy-data.js';
         mode = 'review';
       } else if (mode === 'daily') {
         // Four different skills, with changing skill order and rotating question pools.
+        const dueIds = dueReviewIds();
+        // A due word gets a retrieval turn before new material, without forcing review when caught up.
+        const dueQuestions = dueIds.map(id => QUESTION_BY_ID[id]).filter(question => question && (!['beginner', 'unsure'].includes(state.progress.level) || question.band !== 'Stretch'));
+        const reviewQuestion = dueQuestions.length ? rotatePractice(dueQuestions, 1, 'sampler-due')[0] : null;
         const skills = rotatePractice([
           { id: 'scene' }, { id: 'synonym' }, { id: 'antonym' },
-          { id: 'phrase' }, { id: 'listen' }, { id: 'story' }, { id: 'recall' }
-        ], 4, 'sampler-skills');
+          { id: 'phrase' }, { id: 'listen' }, { id: 'story' }, ...(!reviewQuestion ? [{ id: 'recall' }] : [])
+        ], reviewQuestion ? 3 : 4, 'sampler-skills');
         const sources = { synonym: SYNONYM_ROUNDS, antonym: ANTONYM_ROUNDS,
           phrase: PHRASE_ROUNDS, listen: LISTEN_ROUNDS, story: STORY_ROUNDS };
+        const usedWords = reviewQuestion ? [reviewQuestion.id] : [];
         rounds = skills.map(({ id }) => {
           if (id === 'scene' || id === 'recall') {
-            const question = sampleForLevel(everydayQuestions(), 1, state.progress.level, 'sampler-words')[0];
+            const question = sampleForLevel(everydayQuestions(), 1, state.progress.level, 'sampler-words', usedWords)[0];
+            usedWords.push(question.id);
             return id === 'scene' ? makeSceneMiniRound(question) : makeRecallMiniRound(question);
           }
           const suitable = sources[id].filter(round => {
             const word = round.wordId && QUESTION_BY_ID[round.wordId];
             return !['beginner', 'unsure'].includes(state.progress.level) || !word || word.band !== 'Stretch';
           });
-          return rotatePractice(suitable, 1, `sampler-${id}`)[0];
+          const distinct = suitable.filter(round => !round.wordId || !usedWords.includes(round.wordId));
+          const chosen = rotatePractice(distinct.length ? distinct : suitable, 1, `sampler-${id}`)[0];
+          if (chosen.wordId) usedWords.push(chosen.wordId);
+          return chosen;
         });
+        if (reviewQuestion) rounds.push(makeRecallMiniRound(reviewQuestion));
         rounds = shuffled(rounds);
       } else if (mode === 'recall') {
         rounds = sampleForLevel(everydayQuestions(), 4, state.progress.level, 'recall').map(makeRecallMiniRound);
@@ -1412,7 +1434,9 @@ import { ACADEMY_CONTENT } from './academy-data.js';
     function renderWeekStrip() {
       const days = currentWeekDays();
       const completed = days.filter(day => day.active).length;
-      return `<section class="week-card" aria-label="Practice days this week"><div class="week-copy"><div class="eyebrow">YOUR WEEK, AT YOUR PACE</div><h3>${completed} of 7 practice days</h3><p>Short sessions count. Take a day off whenever you need one—your words stay learned.</p></div><div class="week-days">${days.map(day => `<div class="week-day ${day.active ? 'active' : ''} ${day.future ? 'future' : ''}"><span>${escapeHtml(day.short)}</span><b>${day.active ? '✓' : day.number}</b></div>`).join('')}</div></section>`;
+      const today = todayKey();
+      const todayDone = state.progress.practiceDates.includes(today);
+      return `<section class="week-card" aria-label="Practice days this week"><div class="week-copy"><div class="eyebrow">YOUR WEEK, AT YOUR PACE</div><h3>${completed} of 7 practice days</h3><p>${todayDone ? 'You practiced today. Come back whenever you like.' : 'A short session counts today. Take a day off whenever you need one.'} Your words stay learned.</p></div><div class="week-days">${days.map(day => `<div class="week-day ${day.active ? 'active' : ''} ${day.key === today ? 'is-today' : ''} ${day.future ? 'future' : ''}" aria-label="${escapeHtml(`${day.short} ${day.number}: ${day.active ? 'practiced' : day.future ? 'upcoming' : 'no practice'}`)}"><span>${escapeHtml(day.short)}</span><b aria-hidden="true">${day.active ? '✓' : day.number}</b></div>`).join('')}</div></section>`;
     }
     function renderGameCard(gameId, compact = false) {
       const game = GAME_INFO[gameId];
@@ -1474,7 +1498,7 @@ import { ACADEMY_CONTENT } from './academy-data.js';
         <div class="stats-grid" aria-label="Your learning statistics">
           <div class="stat-card"><div><div class="stat-title">Words explored</div><div class="stat-value">${state.progress.exploredIds.length}</div></div><div class="stat-icon" aria-hidden="true">✦</div></div>
           <div class="stat-card"><div><div class="stat-title">Answer accuracy</div><div class="stat-value">${accuracy()}<span class="stat-suffix">%</span></div></div><div class="stat-icon" aria-hidden="true">◎</div></div>
-          <div class="stat-card"><div><div class="stat-title">Practice streak</div><div class="stat-value">${state.progress.streak}<span class="stat-suffix"> days</span></div></div><div class="stat-icon" aria-hidden="true">✦</div></div>
+          <div class="stat-card"><div><div class="stat-title">Practice streak</div><div class="stat-value">${currentPracticeStreak()}<span class="stat-suffix"> days</span></div></div><div class="stat-icon" aria-hidden="true">✦</div></div>
         </div>
         ${renderWeekStrip()}
         <section class="home-games" aria-labelledby="practice-preview-title"><div class="section-heading"><div><h2 id="practice-preview-title">Want to focus on a skill?</h2><p>Practice context, similar words, opposites, phrases, listening, or short stories.</p></div><button class="text-button" data-view="games">Choose a practice type →</button></div><div class="skill-chips" aria-label="Available practice goals"><span>Word in context</span><span>Similar meaning</span><span>Opposite meaning</span><span>Natural phrases</span><span>Listening</span><span>Short stories</span><span>Type from memory</span></div></section>
@@ -1486,8 +1510,15 @@ import { ACADEMY_CONTENT } from './academy-data.js';
     }
     function renderGames() {
       const dailyRuns = state.progress.gameRuns.daily || 0;
-      return `<div class="page"><header class="page-header"><div class="eyebrow">PRACTICE · NO TIMER</div><h1>What would you like to practice?</h1><p>Each activity has one clear goal. Choose a short round; you can switch activities whenever you like.</p></header>
-        <section class="sampler-card"><div><div class="eyebrow">NOT SURE? START WITH THIS</div><h2>Try four different skills.</h2><p>One scene, one similar word, one opposite, and one everyday phrase. A quick way to see what each activity feels like.</p><button class="btn btn-primary btn-small" data-action="start-daily-mix">Start the four-part sampler ${iconArrow()}</button></div><div class="sampler-steps" aria-hidden="true"><span>Context</span><b>+</b><span>Similar</span><b>+</b><span>Opposite</span><b>+</b><span>Phrases</span></div><div class="sampler-played">${dailyRuns} sampler${dailyRuns === 1 ? '' : 's'} completed</div></section>
+      // An optional suggestion only appears after enough attempts to be meaningful.
+      const focus = ['synonym', 'antonym', 'phrase', 'listen', 'story', 'recall']
+        .map(id => ({ id, stats: state.progress.gameStats[id] || { answered: 0, correct: 0 } }))
+        .filter(item => item.stats.answered >= 3)
+        .sort((a, b) => a.stats.correct / a.stats.answered - b.stats.correct / b.stats.answered)[0];
+      const suggestion = focus && focus.stats.correct < focus.stats.answered
+        ? `<aside class="skill-suggestion" aria-label="Optional practice suggestion"><div><strong>Want another try at ${escapeHtml(GAME_INFO[focus.id].name)}?</strong><p>You have practiced this skill before. Another short round can help you notice the distinction.</p></div><button class="btn btn-outline btn-small" data-action="start-mini" data-game="${focus.id}">Practice this skill ${iconArrow()}</button></aside>` : '';
+      return `<div class="page"><header class="page-header"><div class="eyebrow">PRACTICE · NO TIMER</div><h1>What would you like to practice?</h1><p>Each activity has one clear goal. Choose a short round; you can switch activities whenever you like.</p></header>${suggestion}
+        <section class="sampler-card"><div><div class="eyebrow">NOT SURE? START WITH THIS</div><h2>Try four different skills.</h2><p>Four changing activities drawn from context, similar words, opposites, phrases, listening, stories, and typed recall. When a word is due, one turn helps you remember it.</p><button class="btn btn-primary btn-small" data-action="start-daily-mix">Start the four-part sampler ${iconArrow()}</button></div><div class="sampler-steps" aria-hidden="true"><span>Choose</span><b>+</b><span>Listen</span><b>+</b><span>Read</span><b>+</b><span>Recall</span></div><div class="sampler-played">${dailyRuns} sampler${dailyRuns === 1 ? '' : 's'} completed</div></section>
         <section class="practice-section"><div class="section-heading"><div><h2>Words and phrases</h2><p>Choose a word goal before you start.</p></div></div><div class="game-grid">${['scene','synonym','antonym','phrase'].map(gameId => renderGameCard(gameId)).join('')}</div></section>
         <section class="practice-section"><div class="section-heading"><div><h2>Listen, read, and recall</h2><p>Hear a word, read a short situation, or retrieve a word from memory.</p></div></div><div class="game-grid learning-grid">${['listen','story','recall'].map(gameId => renderGameCard(gameId)).join('')}</div><p class="voice-note"><strong>Pronunciation:</strong> Choose an accent in the top bar. Audio uses the browser’s speech engine and available English voices; if the exact accent is unavailable, the app will tell you which voice it uses instead. A Google-named voice is preferred when your device provides one. This standalone app is not connected to Google Cloud Text-to-Speech.</p></section>
         <div class="tone-cta"><div><h3>Choose words for the situation</h3><p>Tone Shift helps you practice a warmer, clearer, or more formal message for a friend, teammate, or teacher.</p></div><button class="btn btn-light btn-small" data-action="start-tone">Try Tone Shift ${iconArrow()}</button></div>
@@ -1858,7 +1889,7 @@ import { ACADEMY_CONTENT } from './academy-data.js';
         button.setAttribute('aria-current', isActive ? 'page' : 'false');
       });
       const sidebarStreak = document.getElementById('sidebar-streak');
-      if (sidebarStreak) sidebarStreak.textContent = String(state.progress.streak);
+      if (sidebarStreak) sidebarStreak.textContent = String(currentPracticeStreak());
     }
     function startTone() {
       state.session = null;
@@ -2152,7 +2183,8 @@ import { ACADEMY_CONTENT } from './academy-data.js';
         ...a,
         totalAnswered: mergeCounter(a.totalAnswered, b.totalAnswered),
         totalCorrect: mergeCounter(a.totalCorrect, b.totalCorrect),
-        streak: Math.max(a.streak, b.streak),
+        // A larger streak from an older device must not overwrite the newer day's count.
+        streak: a.lastPlayed === b.lastPlayed ? Math.max(a.streak, b.streak) : laterPlayed === a.lastPlayed ? a.streak : b.streak,
         lastPlayed: laterPlayed,
         practiceDates: dates,
         gameRuns: runs,
@@ -2187,7 +2219,9 @@ import { ACADEMY_CONTENT } from './academy-data.js';
         ...progress,
         totalAnswered: Math.max(progress.totalAnswered, cloudAnswered),
         totalCorrect: Math.max(progress.totalCorrect, cloudCorrect),
-        streak: Math.max(progress.streak, Number.isInteger(profile.streak_count) ? profile.streak_count : 0),
+        streak: cloudDate === progress.lastPlayed
+          ? Math.max(progress.streak, Number.isInteger(profile.streak_count) ? profile.streak_count : 0)
+          : latestDate === cloudDate ? (Number.isInteger(profile.streak_count) ? profile.streak_count : 0) : progress.streak,
         lastPlayed: latestDate,
         level: ['beginner', 'intermediate', 'advanced', 'unsure'].includes(profile.english_level) ? profile.english_level : progress.level,
         uiLanguage: ['en', 'es', 'hi', 'bn', 'fr'].includes(profile.ui_language) ? profile.ui_language : progress.uiLanguage,

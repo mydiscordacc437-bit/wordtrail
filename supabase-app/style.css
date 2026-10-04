@@ -144,6 +144,7 @@
     .week-day { display: grid; justify-items: center; gap: 5px; color: #8b958e; font-size: 8px; font-weight: 700; min-width: 31px; }
     .week-day b { width: 27px; height: 27px; display: grid; place-items: center; border: 1px solid #e7ebe4; border-radius: 50%; color: #869189; background: #fafbf8; font-size: 9px; font-weight: 700; }
     .week-day.active b { border-color: #bdd1a1; background: var(--lime); color: #36523b; animation: soft-pop .35s ease both; }
+    .week-day.is-today b { outline: 2px solid var(--accent-text); outline-offset: 2px; }
     .week-day.future { opacity: .5; }
     .game-grid { display: grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: 14px; }
     .learning-grid { grid-template-columns: repeat(3, minmax(0,1fr)); }
@@ -158,7 +159,7 @@
     .game-card h3 { font-size: 14px; letter-spacing: -.03em; margin: 0 0 7px; }
     .game-card p { color: #77837b; font-size: 10px; line-height: 1.55; margin: 0; flex: 1; }
     .game-meta { display: flex; justify-content: space-between; gap: 7px; color: #89938c; font-size: 8px; margin: 14px 0 11px; }
-    .game-play-button { border: 0; border-top: 1px solid #edf0ea; padding: 11px 0 0; background: transparent; color: #3c6851; font-size: 10px; font-weight: 760; display: flex; align-items: center; justify-content: space-between; cursor: pointer; text-align: left; }
+    .game-play-button { min-height: 44px; border: 0; border-top: 1px solid #edf0ea; padding: 11px 0 0; background: transparent; color: #3c6851; font-size: 10px; font-weight: 760; display: flex; align-items: center; justify-content: space-between; cursor: pointer; text-align: left; }
     .game-play-button:hover { color: #1e4937; }
     .game-play-button span { font-size: 16px; transition: transform .18s ease; }
     .game-play-button:hover span { transform: translateX(3px); }
@@ -167,6 +168,11 @@
     .home-worlds { margin-top: 33px; }
     .gentle-note { color: #b8cbbb; font-size: 9px; margin-top: 12px; }
     .gentle-footer { color: #849087; text-align: center; font-size: 10px; line-height: 1.6; margin: 19px 0 0; }
+    .skill-suggestion { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 15px 18px; margin: -6px 0 18px; border: 1px solid var(--line); border-radius: 16px; background: var(--surface-card); }
+    .skill-suggestion strong { color: var(--text-primary); font-size: 13px; }
+    .skill-suggestion p { color: var(--text-secondary); font-size: 11px; line-height: 1.5; margin: 4px 0 0; }
+    .skill-suggestion button { flex-shrink: 0; }
+    @media (max-width: 560px) { .skill-suggestion { align-items: stretch; flex-direction: column; } }
     .sampler-card { display: grid; grid-template-columns: minmax(0,1fr) auto; align-items: center; gap: 15px 24px; background: var(--forest); color: white; border-radius: 23px; padding: 23px 25px; margin: -6px 0 18px; overflow: hidden; }
     .sampler-card .eyebrow { color: #bdd2c4; }
     .sampler-card h2 { font-size: 21px; letter-spacing: -.045em; margin: 7px 0 5px; }
@@ -1118,7 +1124,7 @@ body.dark-theme .week-card .eyebrow { color: var(--text-muted); }
     .academy-test-task { padding: 12px 13px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface-subtle); }
     .academy-test-task strong { font-size: 11px; }
     .academy-writing-toolbar { display: flex; flex-wrap: wrap; gap: 7px; margin: 2px 0 11px; }
-    .academy-filter-chip { min-height: 36px; padding: 7px 10px; border: 1px solid var(--line); border-radius: 999px; background: var(--surface-card); color: var(--text-secondary); font-size: 10px; font-weight: 700; cursor: pointer; transition: background .16s ease, color .16s ease, border-color .16s ease; }
+    .academy-filter-chip { min-height: 44px; padding: 7px 10px; border: 1px solid var(--line); border-radius: 999px; background: var(--surface-card); color: var(--text-secondary); font-size: 10px; font-weight: 700; cursor: pointer; transition: background .16s ease, color .16s ease, border-color .16s ease; }
     .academy-filter-chip:hover { border-color: #9bb89d; color: var(--text-primary); }
     .academy-filter-chip.is-active { border-color: #8baa86; background: var(--accent-surface); color: var(--accent-text); }
     .academy-writing-count { margin: 0 0 13px; color: var(--text-muted); font-size: 10px; }
