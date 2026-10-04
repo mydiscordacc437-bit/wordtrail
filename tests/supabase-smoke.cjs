@@ -65,6 +65,9 @@ assert.match(api, /notes:/);
 
 assert.match(app, /localStorage/);
 assert.match(app, /queueCloudProgressSync/);
+assert.match(app, /practiceHistoryKey\(\) \{ return `\$\{progressStorageKey\(\)\}:practice-history-v1`/);
+assert.match(app, /rotatePractice\(suitable/);
+assert.match(app, /sampler-skills/);
 assert.match(app, /queueCloudQuizResult/);
 assert.match(app, /word-note-form/);
 assert.match(app, /sanitizeUserText\(field\.value \|\| '', 500\)/);
@@ -76,7 +79,7 @@ assert.match(app, /select-onboarding-level/);
 assert.match(app, /complete-onboarding/);
 assert.match(app, /onboardingShowGloss/);
 assert.match(app, /SAFE_HTML_TAGS.*details.*textarea/);
-assert.match(app, /academy-select-class/);
+assert.match(app, /const gradeNumber = 8;/);
 assert.match(app, /academy-view-answer/);
 assert.match(app, /nctb\\\.gov\\\.bd/);
 assert.match(app, /academyWritingFilter/);

@@ -28,6 +28,10 @@ for (const gradeNumber of grades) {
   }
 }
 
+const treeParagraph = ACADEMY_CONTENT.writing.find(entry => entry.id === 'c910-paragraph-trees');
+const treeWords = treeParagraph.modelAnswer.trim().split(/\s+/).length;
+assert.ok(treeWords >= 150 && treeWords <= 180, 'Tree Plantation model matches its 150–180 word prompt');
+
 const ssc = ACADEMY_CONTENT.grades[9].tests;
 const sscClass10 = ACADEMY_CONTENT.grades[10].tests;
 assert.ok(ssc.some(test => test.note.includes('paragraph (10)') && test.note.includes('short composition (20)')));

@@ -479,7 +479,7 @@ import { ACADEMY_CONTENT } from './academy-data.js';
       bookSearch: '',
       pendingImport: null,
       flashcardSession: null,
-      academyClass: null,
+      academyClass: 8,
       academySection: 'overview',
       academyWritingFilter: 'all',
       academyOpenAnswerId: null,
@@ -1034,6 +1034,41 @@ import { ACADEMY_CONTENT } from './academy-data.js';
       }
       return result;
     }
+    // Rotation is local to this browser/account and separate from the progress/backup schema.
+    // Recent items go to the back of their pool; once every item has appeared, reuse is inevitable.
+    const practiceHistoryMemory = new Map();
+    function practiceHistoryKey() { return `${progressStorageKey()}:practice-history-v1`; }
+    function readPracticeHistory() {
+      const key = practiceHistoryKey();
+      try {
+        const parsed = JSON.parse(localStorage.getItem(key) || 'null');
+        if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
+          const clean = Object.create(null);
+          for (const [mode, ids] of Object.entries(parsed).slice(0, 20)) {
+            if (/^[a-z-]{1,30}$/.test(mode) && Array.isArray(ids))
+              clean[mode] = ids.filter(id => typeof id === 'string' && /^[a-z0-9-]{1,60}$/.test(id)).slice(-100);
+          }
+          practiceHistoryMemory.set(key, clean);
+          return clean;
+        }
+      } catch (error) { /* Invalid or unavailable browser storage is ignored. */ }
+      return practiceHistoryMemory.get(key) || Object.create(null);
+    }
+    function rotatePractice(items, count, mode, weightOf = () => 1) {
+      const pool = shuffled(items);
+      const history = readPracticeHistory();
+      const recent = history[mode] || [];
+      const lastUsed = id => recent.lastIndexOf(id);
+      // The shuffle breaks ties without always following the same content order.
+      const tieScores = new Map(pool.map(item => [item.id, Math.pow(Math.random(), 1 / weightOf(item))]));
+      pool.sort((a, b) => lastUsed(a.id) - lastUsed(b.id) || tieScores.get(b.id) - tieScores.get(a.id));
+      const selected = pool.slice(0, count);
+      history[mode] = [...recent, ...selected.map(item => item.id)].slice(-100);
+      const key = practiceHistoryKey();
+      practiceHistoryMemory.set(key, history);
+      try { localStorage.setItem(key, JSON.stringify(history)); } catch (error) { /* Still rotates in memory. */ }
+      return selected;
+    }
     // Every new question gets an unbiased Fisher–Yates option order; saved orders are validated before resume.
     function isOptionOrder(candidate, canonical, keyOf = value => value) {
       if (!Array.isArray(candidate) || candidate.length !== canonical.length) return false;
@@ -1047,34 +1082,19 @@ import { ACADEMY_CONTENT } from './academy-data.js';
       return candidate.map(key => byKey.get(key));
     }
     function optionKeys(options, keyOf = value => value) { return options.map(keyOf); }
-    function sampleForLevel(source, count, level = state.progress.level) {
+    function sampleForLevel(source, count, level = state.progress.level, mode = 'scene') {
       const available = questionPoolForLevel(source, level);
-      if (level === 'beginner' || level === 'unsure' || !level) return shuffled(available).slice(0, count);
-      const everyday = available.filter(item => item.band !== 'Stretch');
-      const stretch = available.filter(item => item.band === 'Stretch');
-      const stretchWeight = level === 'advanced' ? 6 : 2;
-      const weighted = [...everyday, ...stretch.flatMap(item => Array.from({ length: stretchWeight }, () => item))];
-      const picked = [];
-      for (const item of shuffled(weighted)) {
-        if (!picked.includes(item)) picked.push(item);
-        if (picked.length >= count) break;
-      }
-      if (picked.length < count) {
-        for (const item of shuffled(available)) {
-          if (!picked.includes(item)) picked.push(item);
-          if (picked.length >= count) break;
-        }
-      }
-      return picked;
+      const stretchWeight = level === 'advanced' ? 6 : level === 'intermediate' ? 2 : 1;
+      return rotatePractice(available, count, mode, item => item.band === 'Stretch' ? stretchWeight : 1);
     }
     function startSession(mode, envId = null, ids = null) {
       if (!['starter', 'daily', 'environment', 'review'].includes(mode)) return;
       let questions;
       if (mode === 'starter') questions = (ids || []).map(id => hasOwn(QUESTION_BY_ID, id) ? QUESTION_BY_ID[id] : null).filter(Boolean);
-      else if (mode === 'environment') questions = sampleForLevel(getEnvironmentQuestions(envId), 5);
+      else if (mode === 'environment') questions = sampleForLevel(getEnvironmentQuestions(envId), 5, state.progress.level, `environment-${envId}`);
       else if (mode === 'review') questions = (ids || getReviewIds()).map(id => hasOwn(QUESTION_BY_ID, id) ? QUESTION_BY_ID[id] : null).filter(Boolean).slice(0, 5);
-      else questions = sampleForLevel(everydayQuestions(), 5);
-      if (!questions.length) questions = sampleForLevel(everydayQuestions(), Math.min(5, everydayQuestions().length));
+      else questions = sampleForLevel(everydayQuestions(), 5, state.progress.level, 'daily-scene');
+      if (!questions.length) questions = sampleForLevel(everydayQuestions(), Math.min(5, everydayQuestions().length), state.progress.level, 'fallback-scene');
       questions = questions.map(question => ({ ...question, options: shuffled(question.options) }));
       state.session = { mode, envId, questions, index: 0, correct: 0, answered: 0, choice: null, showingFeedback: false, missedIds: [], finished: false };
       state.miniSession = null;
@@ -1148,14 +1168,27 @@ import { ACADEMY_CONTENT } from './academy-data.js';
         rounds = presetRounds;
         mode = 'review';
       } else if (mode === 'daily') {
-        rounds = [
-          makeSceneMiniRound(sampleForLevel(everydayQuestions(), 1)[0]),
-          shuffled(SYNONYM_ROUNDS)[0],
-          shuffled(ANTONYM_ROUNDS)[0],
-          shuffled(PHRASE_ROUNDS)[0]
-        ];
+        // Four different skills, with changing skill order and rotating question pools.
+        const skills = rotatePractice([
+          { id: 'scene' }, { id: 'synonym' }, { id: 'antonym' },
+          { id: 'phrase' }, { id: 'listen' }, { id: 'story' }, { id: 'recall' }
+        ], 4, 'sampler-skills');
+        const sources = { synonym: SYNONYM_ROUNDS, antonym: ANTONYM_ROUNDS,
+          phrase: PHRASE_ROUNDS, listen: LISTEN_ROUNDS, story: STORY_ROUNDS };
+        rounds = skills.map(({ id }) => {
+          if (id === 'scene' || id === 'recall') {
+            const question = sampleForLevel(everydayQuestions(), 1, state.progress.level, 'sampler-words')[0];
+            return id === 'scene' ? makeSceneMiniRound(question) : makeRecallMiniRound(question);
+          }
+          const suitable = sources[id].filter(round => {
+            const word = round.wordId && QUESTION_BY_ID[round.wordId];
+            return !['beginner', 'unsure'].includes(state.progress.level) || !word || word.band !== 'Stretch';
+          });
+          return rotatePractice(suitable, 1, `sampler-${id}`)[0];
+        });
+        rounds = shuffled(rounds);
       } else if (mode === 'recall') {
-        rounds = sampleForLevel(everydayQuestions(), 4).map(makeRecallMiniRound);
+        rounds = sampleForLevel(everydayQuestions(), 4, state.progress.level, 'recall').map(makeRecallMiniRound);
       } else {
         const sources = Object.assign(Object.create(null), { synonym: SYNONYM_ROUNDS, antonym: ANTONYM_ROUNDS, phrase: PHRASE_ROUNDS, listen: LISTEN_ROUNDS, story: STORY_ROUNDS });
         if (!hasOwn(sources, mode)) return;
@@ -1164,7 +1197,7 @@ import { ACADEMY_CONTENT } from './academy-data.js';
           const word = round.wordId && QUESTION_BY_ID[round.wordId];
           return state.progress.level === 'beginner' || state.progress.level === 'unsure' ? !word || word.band !== 'Stretch' : true;
         });
-        rounds = shuffled(suitable).slice(0, Math.min(['story', 'listen'].includes(mode) ? 4 : 5, suitable.length));
+        rounds = rotatePractice(suitable, Math.min(['story', 'listen'].includes(mode) ? 4 : 5, suitable.length), mode);
       }
       if (!rounds.length) rounds = [makeSceneMiniRound(sampleForLevel(everydayQuestions(), 1)[0])];
       rounds = rounds.map(round => Array.isArray(round.options) ? { ...round, options: shuffled(round.options) } : round);
@@ -1535,7 +1568,7 @@ import { ACADEMY_CONTENT } from './academy-data.js';
         : 'Classes 6–8 use textbook-mapped practice. School term plans can vary; this page does not claim one national paper pattern.');
       const bookLink = `<a class="academy-source-link" href="${escapeHtml(ACADEMY_CONTENT.sources[gradeNumber])}">${escapeHtml(uiText('Official NCTB 2026 book listing'))} ↗</a>`;
       const assessmentLink = ssc ? `<a class="academy-source-link" href="${escapeHtml(ACADEMY_CONTENT.sources.ssc2026)}">${escapeHtml(uiText('SSC 2026 assessment notice'))} ↗</a>` : '';
-      return `<div class="page academy-page"><div class="academy-class-top"><div><div class="eyebrow">${escapeHtml(uiText('NCTB 2026 · general Bangla-medium'))}</div><h1>${escapeHtml(uiText('Class'))} ${gradeNumber}</h1><p>${escapeHtml(uiText('English answers · concise Bangla writing support'))}</p></div><button type="button" class="academy-change-class" data-action="academy-choose-class">${escapeHtml(uiText('Choose another class'))}</button></div><section class="academy-assessment-note ${ssc ? 'is-ssc' : ''}"><strong>${escapeHtml(assessmentHeading)}</strong><p>${escapeHtml(assessmentCopy)}</p></section><div class="academy-section-grid">${sectionCards}</div><div class="academy-wordbook-strip"><div><strong>${escapeHtml(uiText('My Wordbook'))}</strong><span>${escapeHtml(uiText('Saved words, notes, and review stay unchanged.'))}</span></div><button type="button" class="academy-wordbook-link" data-view="wordbook">${escapeHtml(uiText('Open wordbook'))} ${iconArrow()}</button></div><div class="academy-source-row"><span>${escapeHtml(uiText('Sources'))}: ${escapeHtml(grade.books.join(' · '))}</span>${bookLink}${assessmentLink}</div></div>`;
+      return `<div class="page academy-page"><div class="academy-class-top"><div><div class="eyebrow">${escapeHtml(uiText('NCTB 2026 · general Bangla-medium'))}</div><h1>${escapeHtml(uiText('Class'))} ${gradeNumber}</h1><p>${escapeHtml(uiText('English answers · concise Bangla writing support'))}</p></div></div><section class="academy-assessment-note ${ssc ? 'is-ssc' : ''}"><strong>${escapeHtml(assessmentHeading)}</strong><p>${escapeHtml(assessmentCopy)}</p></section><div class="academy-section-grid">${sectionCards}</div><div class="academy-wordbook-strip"><div><strong>${escapeHtml(uiText('My Wordbook'))}</strong><span>${escapeHtml(uiText('Saved words, notes, and review stay unchanged.'))}</span></div><button type="button" class="academy-wordbook-link" data-view="wordbook">${escapeHtml(uiText('Open wordbook'))} ${iconArrow()}</button></div><div class="academy-source-row"><span>${escapeHtml(uiText('Sources'))}: ${escapeHtml(grade.books.join(' · '))}</span>${bookLink}${assessmentLink}</div></div>`;
     }
     function renderAcademySyllabus(gradeNumber, grade) {
       const ssc = gradeNumber >= 9;
@@ -1575,9 +1608,10 @@ import { ACADEMY_CONTENT } from './academy-data.js';
       return `<div class="page academy-page">${academySectionHeader(gradeNumber, 'Writing bank', uiText('Model answers with short Bangla support.'))}<div class="academy-writing-toolbar" role="group" aria-label="${escapeHtml(uiText('Filter writing tasks'))}">${filters.map(([id, label]) => `<button type="button" class="academy-filter-chip ${filter === id ? 'is-active' : ''}" data-action="academy-writing-filter" data-writing-filter="${id}" aria-pressed="${filter === id}">${escapeHtml(uiText(label))}</button>`).join('')}</div><p class="academy-writing-count">${entries.length} ${escapeHtml(uiText('original model answers'))} · ${escapeHtml(uiText('Original practice; not an official paper.'))}</p>${cards ? `<div class="academy-writing-grid">${cards}</div>` : `<div class="empty-state"><h3>${escapeHtml(uiText('No answers in this category.'))}</h3><p>${escapeHtml(uiText('Choose another writing filter to browse this class.'))}</p></div>`}<div class="academy-wordbook-strip"><div><strong>${escapeHtml(uiText('My Wordbook'))}</strong><span>${escapeHtml(uiText('Saved words, notes, and review stay unchanged.'))}</span></div><button type="button" class="academy-wordbook-link" data-view="wordbook">${escapeHtml(uiText('Open wordbook'))} ${iconArrow()}</button></div></div>`;
     }
     function renderAcademy() {
-      const gradeNumber = Number(state.academyClass);
+      // Only Class 8 is open for now. Other grades remain in ACADEMY_CONTENT for a later release.
+      const gradeNumber = 8;
+      state.academyClass = gradeNumber;
       const grade = academyGradeData(gradeNumber);
-      if (!grade) return renderAcademyClassPicker();
       if (state.academySection === 'syllabus') return renderAcademySyllabus(gradeNumber, grade);
       if (state.academySection === 'tests') return renderAcademyTests(gradeNumber, grade);
       if (state.academySection === 'writing') return renderAcademyWriting(gradeNumber);
@@ -1864,12 +1898,7 @@ import { ACADEMY_CONTENT } from './academy-data.js';
       const button = event.target.closest('[data-action]');
       if (!button || button.disabled) return;
       const action = button.dataset.action;
-      if (action === 'academy-select-class') {
-        const gradeNumber = Number(button.dataset.grade);
-        if (hasOwn(ACADEMY_CONTENT.grades, gradeNumber)) { state.academyClass = gradeNumber; state.academySection = 'overview'; state.academyWritingFilter = 'all'; state.academyOpenAnswerId = null; render(); focusMainHeading(); }
-      }
-      else if (action === 'academy-choose-class') { state.academyClass = null; state.academySection = 'overview'; state.academyOpenAnswerId = null; render(); focusMainHeading(); }
-      else if (action === 'academy-back-class') { state.academySection = 'overview'; state.academyOpenAnswerId = null; render(); focusMainHeading(); }
+      if (action === 'academy-back-class') { state.academySection = 'overview'; state.academyOpenAnswerId = null; render(); focusMainHeading(); }
       else if (action === 'academy-open-section') {
         const section = button.dataset.section;
         if (['syllabus', 'tests', 'writing'].includes(section)) { state.academySection = section; if (section === 'writing') { state.academyWritingFilter = 'all'; state.academyOpenAnswerId = null; } render(); focusMainHeading(); }
