@@ -3,7 +3,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 
 const root = path.join(__dirname, '..', 'supabase-app');
-const required = ['index.html', 'style.css', 'js/config.js', 'js/auth.js', 'js/api.js', 'js/academy-data.js', 'js/app.js', 'schema.sql'];
+const required = ['index.html', 'style.css', 'js/config.js', 'js/auth.js', 'js/api.js', 'js/academy-data.js', 'js/usage-data.js', 'js/app.js', 'schema.sql'];
 for (const file of required) assert.ok(fs.existsSync(path.join(root, file)), `Missing Supabase deliverable: ${file}`);
 
 const html = fs.readFileSync(path.join(root, 'index.html'), 'utf8');
@@ -26,6 +26,8 @@ assert.match(desktopNav, /data-view="wordbook"/);
 assert.doesNotMatch(mobileNav, /data-view="wordbook"/);
 assert.match(css, /\.academy-page/);
 assert.match(app, /import \{ ACADEMY_CONTENT \} from '\.\/academy-data\.js'/);
+assert.match(app, /import \{ USAGE_CONCEPTS, USAGE_ROUNDS \} from '\.\/usage-data\.js'/);
+assert.match(app, /'usage', 'daily', 'review'/);
 assert.match(academyData, /export const ACADEMY_CONTENT/);
 assert.match(academyData, /ACADEMY_SSC_TESTS_CLASS10/);
 assert.match(academyData, /c910-letter-study-tour/);

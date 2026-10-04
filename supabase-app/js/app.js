@@ -1,4 +1,5 @@
 import { ACADEMY_CONTENT } from './academy-data.js';
+import { USAGE_CONCEPTS, USAGE_ROUNDS } from './usage-data.js';
 
     // Keep implementation details and the vocabulary corpus out of the global namespace.
     // This is defense-in-depth only: browser-side code/data remain inspectable and user-owned.
@@ -169,6 +170,7 @@ import { ACADEMY_CONTENT } from './academy-data.js';
     ];
 
     const GAME_INFO = {
+      usage: { name: 'Usage Studio', icon: '💬', label: 'COMMON ENGLISH IN CONTEXT', description: 'Choose or interpret everyday expressions in realistic situations. Built for intermediate learners.', learning: 'Distinguish natural expressions and their precise meanings.', count: `${USAGE_ROUNDS.length} practice tasks`, color: '#e6ecf5' },
       scene: { name: 'Scene Pick', icon: '🧭', label: 'CHOOSE BY CONTEXT', description: 'Read a short situation and choose the word that fits it best.', learning: 'Use sentence clues to choose a word.', count: '50 scene cards', color: '#e8f0dc' },
       synonym: { name: 'Synonym Switch', icon: '🔁', label: 'SIMILAR MEANING', description: 'Find a nearby word, then notice how the tone or strength changes.', learning: 'Tell near-synonyms apart.', count: `${SYNONYM_ROUNDS.length} quick rounds`, color: '#e1edf3' },
       antonym: { name: 'Opposite Snap', icon: '↔️', label: 'OPPOSITE MEANING', description: 'Choose the opposite that makes sense in this sentence.', learning: 'Use opposites in context.', count: `${ANTONYM_ROUNDS.length} quick rounds`, color: '#f5e8dc' },
@@ -244,7 +246,7 @@ import { ACADEMY_CONTENT } from './academy-data.js';
     ];
 
     const QUESTION_BY_ID = Object.assign(Object.create(null), Object.fromEntries(QUESTIONS.map(q => [q.id, q])));
-    const ROUND_BY_ID = Object.assign(Object.create(null), Object.fromEntries([...SYNONYM_ROUNDS, ...ANTONYM_ROUNDS, ...PHRASE_ROUNDS, ...STORY_ROUNDS, ...LISTEN_ROUNDS].map(round => [round.id, round])));
+    const ROUND_BY_ID = Object.assign(Object.create(null), Object.fromEntries([...SYNONYM_ROUNDS, ...ANTONYM_ROUNDS, ...PHRASE_ROUNDS, ...STORY_ROUNDS, ...LISTEN_ROUNDS, ...USAGE_ROUNDS].map(round => [round.id, round])));
     const STORAGE_KEY = 'wordtrail-progress-v1';
     const SESSION_STORAGE_KEY = 'wordtrail-active-session-v1';
     let currentUser = null;
@@ -464,7 +466,7 @@ import { ACADEMY_CONTENT } from './academy-data.js';
       Object.values(value).forEach(child => deepFreeze(child, seen));
       return value;
     }
-    deepFreeze([ENVIRONMENTS, QUESTIONS, RELATED_WORDS, ANTONYMS, SYNONYM_ROUNDS, ANTONYM_ROUNDS, PHRASE_ROUNDS, STORY_ROUNDS, LISTEN_ROUNDS, NUANCE_SETS, TONE_SCENARIOS, QUESTION_BY_ID, ROUND_BY_ID, GAME_INFO, LEVELS, ACCENT_OPTIONS, UI_TRANSLATIONS, ONBOARDING_LANGUAGES, WORD_GLOSSES, STARTER_PATHS, REVIEW_INTERVAL_DAYS, DEFAULT_PROGRESS, ACADEMY_CONTENT]);
+    deepFreeze([ENVIRONMENTS, QUESTIONS, RELATED_WORDS, ANTONYMS, SYNONYM_ROUNDS, ANTONYM_ROUNDS, PHRASE_ROUNDS, STORY_ROUNDS, LISTEN_ROUNDS, USAGE_CONCEPTS, USAGE_ROUNDS, NUANCE_SETS, TONE_SCENARIOS, QUESTION_BY_ID, ROUND_BY_ID, GAME_INFO, LEVELS, ACCENT_OPTIONS, UI_TRANSLATIONS, ONBOARDING_LANGUAGES, WORD_GLOSSES, STARTER_PATHS, REVIEW_INTERVAL_DAYS, DEFAULT_PROGRESS, ACADEMY_CONTENT]);
     const loadedProgress = loadProgress();
     const recoveredSession = loadActiveSession();
     const state = {
@@ -510,8 +512,8 @@ import { ACADEMY_CONTENT } from './academy-data.js';
       if (!stored || typeof stored !== 'object' || Array.isArray(stored)) throw new Error('Progress must be an object.');
       const array = value => Array.isArray(value) ? value.filter(id => hasOwn(QUESTION_BY_ID, id)) : [];
       const count = value => Number.isFinite(value) && value >= 0 ? Math.floor(value) : 0;
-      const gameIds = ['scene', 'synonym', 'antonym', 'phrase', 'listen', 'story', 'recall', 'daily', 'review', 'tone'];
-      const statIds = ['scene', 'synonym', 'antonym', 'phrase', 'listen', 'story', 'recall'];
+      const gameIds = ['scene', 'synonym', 'antonym', 'phrase', 'listen', 'story', 'recall', 'usage', 'daily', 'review', 'tone'];
+      const statIds = ['scene', 'synonym', 'antonym', 'phrase', 'listen', 'story', 'recall', 'usage'];
       const totalAnswered = count(stored.totalAnswered);
       const totalCorrect = Math.min(totalAnswered, count(stored.totalCorrect));
       const runs = Object.fromEntries(gameIds.map(id => [id, count(stored.gameRuns && stored.gameRuns[id])]));
@@ -656,7 +658,7 @@ import { ACADEMY_CONTENT } from './academy-data.js';
             };
           }
         }
-        if (saved.mini && ['daily', 'review', 'synonym', 'antonym', 'phrase', 'story', 'listen', 'recall'].includes(saved.mini.mode)) {
+        if (saved.mini && ['daily', 'review', 'synonym', 'antonym', 'phrase', 'story', 'listen', 'recall', 'usage'].includes(saved.mini.mode)) {
           const roundIds = Array.isArray(saved.mini.roundIds) ? saved.mini.roundIds.slice(0, 5) : [];
           const savedOptionOrders = Array.isArray(saved.mini.optionOrders) ? saved.mini.optionOrders : [];
           const canonicalRounds = roundIds.map(id => {
@@ -1049,9 +1051,9 @@ import { ACADEMY_CONTENT } from './academy-data.js';
         const parsed = JSON.parse(localStorage.getItem(key) || 'null');
         if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
           const clean = Object.create(null);
-          for (const [mode, ids] of Object.entries(parsed).slice(0, 20)) {
+          for (const [mode, ids] of Object.entries(parsed).slice(0, 40)) {
             if (/^[a-z-]{1,30}$/.test(mode) && Array.isArray(ids))
-              clean[mode] = ids.filter(id => typeof id === 'string' && /^[a-z0-9-]{1,60}$/.test(id)).slice(-100);
+              clean[mode] = ids.filter(id => typeof id === 'string' && /^[a-z0-9-]{1,100}$/.test(id)).slice(-1200);
           }
           practiceHistoryMemory.set(key, clean);
           return clean;
@@ -1064,16 +1066,28 @@ import { ACADEMY_CONTENT } from './academy-data.js';
       practiceHistoryMemory.delete(key);
       try { localStorage.removeItem(key); } catch (error) { /* In-memory rotation is also reset. */ }
     }
-    function rotatePractice(items, count, mode, weightOf = () => 1) {
+    function rotatePractice(items, count, mode, weightOf = () => 1, groupOf = item => item.id) {
       const pool = shuffled(items);
       const history = readPracticeHistory();
       const recent = history[mode] || [];
-      const lastUsed = id => recent.lastIndexOf(id);
+      const recency = new Map(recent.map((id, index) => [id, index]));
+      const lastUsed = id => recency.get(id) ?? -1;
       // The shuffle breaks ties without always following the same content order.
       const tieScores = new Map(pool.map(item => [item.id, Math.pow(Math.random(), 1 / weightOf(item))]));
       pool.sort((a, b) => lastUsed(a.id) - lastUsed(b.id) || tieScores.get(b.id) - tieScores.get(a.id));
-      const selected = pool.slice(0, count);
-      history[mode] = [...recent, ...selected.map(item => item.id)].slice(-100);
+      const selected = [];
+      const groups = new Set();
+      for (const item of pool) {
+        if (groups.has(groupOf(item))) continue;
+        selected.push(item);
+        groups.add(groupOf(item));
+        if (selected.length === count) break;
+      }
+      if (selected.length < count) for (const item of pool) {
+        if (!selected.includes(item)) selected.push(item);
+        if (selected.length === count) break;
+      }
+      history[mode] = [...recent, ...selected.map(item => item.id)].slice(-1200);
       const key = practiceHistoryKey();
       practiceHistoryMemory.set(key, history);
       try { localStorage.setItem(key, JSON.stringify(history)); } catch (error) { /* Still rotates in memory. */ }
@@ -1209,6 +1223,21 @@ import { ACADEMY_CONTENT } from './academy-data.js';
         });
         if (reviewQuestion) rounds.push(makeRecallMiniRound(reviewQuestion));
         rounds = shuffled(rounds);
+      } else if (mode === 'usage') {
+        const history = readPracticeHistory().usage || [];
+        const seen = new Set(history);
+        const unseen = USAGE_ROUNDS.filter(round => !seen.has(round.id));
+        const lastConcepts = new Set(history.slice(-5).map(id => ROUND_BY_ID[id]?.conceptId));
+        if (unseen.length > 0 && unseen.length < 5) {
+          const unseenFirst = rotatePractice(unseen, unseen.length, 'usage', () => 1, round => round.conceptId);
+          const groups = new Set(unseenFirst.map(round => round.conceptId));
+          const remainder = USAGE_ROUNDS.filter(round => !groups.has(round.conceptId));
+          rounds = [...unseenFirst, ...rotatePractice(remainder, 5 - unseenFirst.length, 'usage', () => 1, round => round.conceptId)];
+        } else {
+          const pool = unseen.length ? unseen : USAGE_ROUNDS;
+          const differentConcepts = pool.filter(round => !lastConcepts.has(round.conceptId));
+          rounds = rotatePractice(differentConcepts.length >= 5 ? differentConcepts : pool, 5, 'usage', () => 1, round => round.conceptId);
+        }
       } else if (mode === 'recall') {
         rounds = sampleForLevel(everydayQuestions(), 4, state.progress.level, 'recall').map(makeRecallMiniRound);
       } else {
@@ -1520,7 +1549,7 @@ import { ACADEMY_CONTENT } from './academy-data.js';
       return `<div class="page"><header class="page-header"><div class="eyebrow">PRACTICE · NO TIMER</div><h1>What would you like to practice?</h1><p>Each activity has one clear goal. Choose a short round; you can switch activities whenever you like.</p></header>${suggestion}
         <section class="sampler-card"><div><div class="eyebrow">NOT SURE? START WITH THIS</div><h2>Try four different skills.</h2><p>Four changing activities drawn from context, similar words, opposites, phrases, listening, stories, and typed recall. When a word is due, one turn helps you remember it.</p><button class="btn btn-primary btn-small" data-action="start-daily-mix">Start the four-part sampler ${iconArrow()}</button></div><div class="sampler-steps" aria-hidden="true"><span>Choose</span><b>+</b><span>Listen</span><b>+</b><span>Read</span><b>+</b><span>Recall</span></div><div class="sampler-played">${dailyRuns} sampler${dailyRuns === 1 ? '' : 's'} completed</div></section>
         <section class="practice-section"><div class="section-heading"><div><h2>Words and phrases</h2><p>Choose a word goal before you start.</p></div></div><div class="game-grid">${['scene','synonym','antonym','phrase'].map(gameId => renderGameCard(gameId)).join('')}</div></section>
-        <section class="practice-section"><div class="section-heading"><div><h2>Listen, read, and recall</h2><p>Hear a word, read a short situation, or retrieve a word from memory.</p></div></div><div class="game-grid learning-grid">${['listen','story','recall'].map(gameId => renderGameCard(gameId)).join('')}</div><p class="voice-note"><strong>Pronunciation:</strong> Choose an accent in the top bar. Audio uses the browser’s speech engine and available English voices; if the exact accent is unavailable, the app will tell you which voice it uses instead. A Google-named voice is preferred when your device provides one. This standalone app is not connected to Google Cloud Text-to-Speech.</p></section>
+        <section class="practice-section"><div class="section-heading"><div><h2>Listen, read, and recall</h2><p>Hear a word, read a short situation, or retrieve a word from memory.</p></div></div><div class="game-grid learning-grid">${['listen','story','recall','usage'].map(gameId => renderGameCard(gameId)).join('')}</div><p class="voice-note"><strong>Pronunciation:</strong> Choose an accent in the top bar. Audio uses the browser’s speech engine and available English voices; if the exact accent is unavailable, the app will tell you which voice it uses instead. A Google-named voice is preferred when your device provides one. This standalone app is not connected to Google Cloud Text-to-Speech.</p></section>
         <div class="tone-cta"><div><h3>Choose words for the situation</h3><p>Tone Shift helps you practice a warmer, clearer, or more formal message for a friend, teammate, or teacher.</p></div><button class="btn btn-light btn-small" data-action="start-tone">Try Tone Shift ${iconArrow()}</button></div>
         <p class="gentle-footer">Your streak is a record, not a requirement. Missing a day never removes words or progress.</p></div>`;
     }
@@ -1760,7 +1789,9 @@ import { ACADEMY_CONTENT } from './academy-data.js';
       const near = word ? (RELATED_WORDS[word.id] || []) : [];
       const opposite = word ? (ANTONYMS[word.id] || []) : [];
       const sentence = round.sentence ? escapeHtml(round.sentence).replace('____', `<span class="blank-slot">${round.type === 'recall' ? 'your word' : 'your words'}</span>`) : '';
-      const roundContent = round.story
+      const roundContent = round.type === 'usage'
+        ? `<div class="story-passage"><div class="eyebrow">${escapeHtml(round.scene)}</div><p>${sentence}</p></div>`
+        : round.story
         ? `<div class="story-passage"><div class="eyebrow">${escapeHtml(round.scene || 'SHORT STORY')}</div><p>${escapeHtml(round.story)}</p></div>`
         : round.type === 'listen'
           ? `<div class="listen-controls"><button class="listen-button" data-action="speak-word" data-word="${escapeHtml(round.audioWord)}" aria-label="Play ${escapeHtml(round.audioWord)} in ${escapeHtml(accentLabel())}" ${speechDisabledAttributes()}><span class="listen-icon" aria-hidden="true">${speakerIcon()}</span><span><strong>Play the word</strong><small>${escapeHtml(accentLabel())}</small></span></button><button class="listen-slow-button" data-action="speak-word" data-word="${escapeHtml(round.audioWord)}" data-rate="slow" ${speechDisabledAttributes()}>Play slowly</button></div>`
@@ -1774,15 +1805,15 @@ import { ACADEMY_CONTENT } from './academy-data.js';
           else if (option === session.choice) status = 'incorrect';
           else status = 'dimmed';
         }
-        return `<div class="option-row"><button class="option-button ${status}" data-action="mini-answer" data-answer="${escapeHtml(option)}" ${showFeedback ? 'disabled' : ''} aria-label="Option ${letters[index]}: ${escapeHtml(option)}"><span class="option-letter">${letters[index]}</span><span class="option-word">${escapeHtml(option)}</span></button>${round.type === 'listen' ? '' : speakerButton(option)}</div>`;
+        return `<div class="option-row"><button class="option-button ${status}" data-action="mini-answer" data-answer="${escapeHtml(option)}" ${showFeedback ? 'disabled' : ''} aria-label="Option ${letters[index]}: ${escapeHtml(option)}"><span class="option-letter">${letters[index]}</span><span class="option-word">${escapeHtml(option)}</span></button>${round.type === 'listen' || (round.type === 'usage' && round.id.endsWith('-meaning')) ? '' : speakerButton(option)}</div>`;
       }).join('');
       let feedback = '';
       if (showFeedback) {
-        feedback = `<section class="feedback-card ${correct ? '' : 'incorrect-feedback'}"><div class="feedback-heading" role="status" aria-live="polite" aria-atomic="true" tabindex="-1"><span class="feedback-check" aria-hidden="true">${correct ? '✓' : '↗'}</span>${correct ? 'Nice fit.' : `The best fit here is “${escapeHtml(round.answer)}.”`}</div>${round.type !== 'phrase' ? `<div class="feedback-word"><span>Word: <strong>${escapeHtml(round.answer)}</strong></span>${speakerButton(round.answer)}</div>` : ''}<p>${escapeHtml(round.explanation)}</p>${round.wordId ? renderGlossLine(round.wordId) : ''}${near.length ? `<div class="related-row"><strong>Near-synonyms:</strong> ${near.map(item => `<span class="related-chip">${escapeHtml(item)}</span>`).join('')}</div>` : ''}${opposite.length ? `<div class="related-row"><strong>Opposites:</strong> ${opposite.map(item => `<span class="related-chip opposite-chip">${escapeHtml(item)}</span>`).join('')}</div>` : ''}<div class="feedback-actions">${word ? `<button class="save-word-button" data-action="toggle-saved" data-id="${word.id}">${state.progress.savedIds.includes(word.id) ? '♥ Saved to wordbook' : '♡ Save this word'}</button>` : '<span class="hint-line" style="margin:0">Small phrase, big difference.</span>'}<button class="btn btn-primary btn-small" data-action="next-mini">${session.index + 1 >= total ? 'See your results' : 'Next turn'} ${iconArrow()}</button></div></section>`;
+        feedback = `<section class="feedback-card ${correct ? '' : 'incorrect-feedback'}"><div class="feedback-heading" role="status" aria-live="polite" aria-atomic="true" tabindex="-1"><span class="feedback-check" aria-hidden="true">${correct ? '✓' : '↗'}</span>${correct ? 'Nice fit.' : `The best fit here is “${escapeHtml(round.answer)}.”`}</div>${!['phrase', 'usage'].includes(round.type) ? `<div class="feedback-word"><span>Word: <strong>${escapeHtml(round.answer)}</strong></span>${speakerButton(round.answer)}</div>` : ''}<p>${escapeHtml(round.explanation)}</p>${round.wordId ? renderGlossLine(round.wordId) : ''}${near.length ? `<div class="related-row"><strong>Near-synonyms:</strong> ${near.map(item => `<span class="related-chip">${escapeHtml(item)}</span>`).join('')}</div>` : ''}${opposite.length ? `<div class="related-row"><strong>Opposites:</strong> ${opposite.map(item => `<span class="related-chip opposite-chip">${escapeHtml(item)}</span>`).join('')}</div>` : ''}<div class="feedback-actions">${word ? `<button class="save-word-button" data-action="toggle-saved" data-id="${word.id}">${state.progress.savedIds.includes(word.id) ? '♥ Saved to wordbook' : '♡ Save this word'}</button>` : '<span class="hint-line" style="margin:0">Small phrase, big difference.</span>'}<button class="btn btn-primary btn-small" data-action="next-mini">${session.index + 1 >= total ? 'See your results' : 'Next turn'} ${iconArrow()}</button></div></section>`;
       }
       const modeTitle = session.mode === 'daily' ? 'Daily sampler' : session.mode === 'review' ? 'Quick review' : meta.name;
-      const asideHeading = round.type === 'listen' ? 'Listen more than once' : round.type === 'story' ? 'Use the story details' : round.type === 'recall' ? 'Start with memory' : 'Notice the context';
-      const asideDescription = round.type === 'listen'
+      const asideHeading = round.type === 'usage' ? 'Notice the intended action' : round.type === 'listen' ? 'Listen more than once' : round.type === 'story' ? 'Use the story details' : round.type === 'recall' ? 'Start with memory' : 'Notice the context';
+      const asideDescription = round.type === 'usage' ? 'Several expressions may be natural English; choose the one supported by this situation. A different action needs a different expression.' : round.type === 'listen'
         ? 'Play the word at normal or slower speed, then match its sound to the spelling. The browser’s speech engine supplies the voice; availability varies by browser and device.'
         : round.type === 'story'
           ? 'Look for the detail that explains the person’s choice. The answer should fit the action, not just the general topic.'
@@ -1795,7 +1826,7 @@ import { ACADEMY_CONTENT } from './academy-data.js';
                 : round.type === 'phrase'
                   ? 'Everyday English often pairs certain words together. Choose the phrase that sounds natural in this context.'
                   : 'Use the scene and clue together. The answer should fit the meaning and the situation.';
-      return `<div class="page mini-page"><div class="challenge-top"><button class="back-button" data-action="exit-mini">← &nbsp;All practice types</button><div class="step-count">${escapeHtml(modeTitle)} &nbsp;·&nbsp; Turn ${session.index + 1} of ${total}</div></div><div class="progress-track challenge-progress" role="progressbar" aria-label="Mini-game progress" aria-valuenow="${percent}" aria-valuemin="0" aria-valuemax="100"><span style="width:${percent}%"></span></div><div class="mini-game-layout"><section class="question-card mini-question-card"><div class="mini-mode-pill" style="--game-tint:${meta.color}"><span aria-hidden="true">${meta.icon}</span>${escapeHtml(meta.name)}<span class="mini-band">${word ? escapeHtml(word.band || 'Everyday') : round.type === 'listen' ? 'LISTENING' : round.type === 'recall' ? 'RECALL' : 'EVERYDAY PHRASE'}</span></div><div class="question-label">${escapeHtml(meta.label)}</div><h1>${escapeHtml(round.prompt)}</h1>${roundContent}${round.clue && !['listen', 'recall'].includes(round.type) ? `<div class="hint-line">A clue: ${escapeHtml(round.clue)}</div>${!showFeedback && round.wordId ? renderGlossLine(round.wordId) : ''}` : ''}${round.type === 'recall' ? '' : `<div class="option-list">${options}</div>`}${feedback}</section><aside class="challenge-aside"><section class="aside-card"><div class="aside-tip-icon" aria-hidden="true">✦</div><h3>${asideHeading}</h3><p>${asideDescription}</p></section><section class="aside-card"><h3>This short round</h3><div class="aside-progress-number">${session.correct}<span class="aside-denominator"> / ${session.answered}</span></div><div class="aside-progress-label">best fits so far</div><div class="mini-track"><span style="width:${session.answered ? Math.round((session.correct/session.answered)*100) : 0}%"></span></div><p style="margin-top:10px">No timer. Stop whenever you need.</p></section></aside></div></div>`;
+      return `<div class="page mini-page"><div class="challenge-top"><button class="back-button" data-action="exit-mini">← &nbsp;All practice types</button><div class="step-count">${escapeHtml(modeTitle)} &nbsp;·&nbsp; Turn ${session.index + 1} of ${total}</div></div><div class="progress-track challenge-progress" role="progressbar" aria-label="Mini-game progress" aria-valuenow="${percent}" aria-valuemin="0" aria-valuemax="100"><span style="width:${percent}%"></span></div><div class="mini-game-layout"><section class="question-card mini-question-card"><div class="mini-mode-pill" style="--game-tint:${meta.color}"><span aria-hidden="true">${meta.icon}</span>${escapeHtml(meta.name)}<span class="mini-band">${word ? escapeHtml(word.band || 'Everyday') : round.type === 'listen' ? 'LISTENING' : round.type === 'recall' ? 'RECALL' : round.type === 'usage' ? 'INTERMEDIATE' : 'EVERYDAY PHRASE'}</span></div><div class="question-label">${escapeHtml(meta.label)}</div><h1>${escapeHtml(round.prompt)}</h1>${roundContent}${round.clue && !['listen', 'recall'].includes(round.type) ? `<div class="hint-line">A clue: ${escapeHtml(round.clue)}</div>${!showFeedback && round.wordId ? renderGlossLine(round.wordId) : ''}` : ''}${round.type === 'recall' ? '' : `<div class="option-list">${options}</div>`}${feedback}</section><aside class="challenge-aside"><section class="aside-card"><div class="aside-tip-icon" aria-hidden="true">✦</div><h3>${asideHeading}</h3><p>${asideDescription}</p></section><section class="aside-card"><h3>This short round</h3><div class="aside-progress-number">${session.correct}<span class="aside-denominator"> / ${session.answered}</span></div><div class="aside-progress-label">best fits so far</div><div class="mini-track"><span style="width:${session.answered ? Math.round((session.correct/session.answered)*100) : 0}%"></span></div><p style="margin-top:10px">No timer. Stop whenever you need.</p></section></aside></div></div>`;
     }
     function renderMiniSummary() {
       const session = state.miniSession;

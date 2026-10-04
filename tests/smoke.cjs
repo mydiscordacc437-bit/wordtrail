@@ -899,7 +899,41 @@ assert.equal(value('state.progress.accent'), 'en-US');
   assert.doesNotThrow(() => value('saveProgress()'), 'Storage quota failures are caught');
   assert.doesNotThrow(() => value('persistActiveSession()'), 'Session write failures are caught');
   storageBlocked = false;
-  console.log('Wordtrail smoke tests passed: randomized choices, CSP/sanitizer guards, secure storage validation, onboarding, all practice modes, speech fallbacks, backup/restore, and reload recovery.');
+  // Usage Studio draws five distinct intermediate expressions without repeating the last round.
+const modularUsage = await import('../supabase-app/js/usage-data.js');
+assert.equal(JSON.stringify(value('USAGE_ROUNDS')), JSON.stringify(modularUsage.USAGE_ROUNDS), 'Both builds produce exactly the same canonical practice tasks');
+assert.equal(value('USAGE_CONCEPTS.length'), 125);
+assert.equal(value('USAGE_ROUNDS.length'), 1000);
+assert.equal(value('new Set(USAGE_ROUNDS.map(round => round.id)).size'), 1000);
+assert.equal(value("USAGE_ROUNDS.every(round => round.options.length === 4 && new Set(round.options).size === 4 && round.options.includes(round.answer))"), true);
+click({ action: 'start-mini', data: { game: 'usage' } });
+assert.equal(value('state.miniSession.rounds.length'), 5);
+const usageConcepts = value('state.miniSession.rounds.map(round => round.conceptId)');
+assert.equal(new Set(usageConcepts).size, 5);
+assert.match(main.innerHTML, /Usage Studio/);
+assert.equal(value('loadActiveSession().miniSession.rounds.map(round => round.id).join()'), value('state.miniSession.rounds.map(round => round.id).join()'), 'New tasks recover from canonical IDs');
+click({ action: 'start-mini', data: { game: 'usage' } });
+assert.equal(value('state.miniSession.rounds.every(round => !' + JSON.stringify(usageConcepts) + '.includes(round.conceptId))'), true, 'Consecutive rounds avoid the same expressions');
+for (let i = 0; i < 5; i += 1) { clickMiniAnswer(value('currentMiniRound().answer')); nextMini(); }
+assert.equal(value('state.progress.gameRuns.usage'), 1);
+assert.equal(value('state.progress.gameStats.usage.answered'), 5);
+resetUsage: {
+  value('resetPracticeHistory()');
+  const visited = new Set();
+  for (let session = 0; session < 200; session += 1) {
+    value("startMiniGame('usage')");
+    for (const id of value('state.miniSession.rounds.map(round => round.id)')) {
+      assert.equal(visited.has(id), false, `Usage card ${id} repeated before the full bank was seen`);
+      visited.add(id);
+    }
+  }
+  assert.equal(visited.size, 1000, 'All thousand cards appear exactly once per full rotation');
+  assert.equal(JSON.parse(store.get(value('practiceHistoryKey()'))).usage.length, 1000, 'Full rotation persists for this browser profile');
+  value("startMiniGame('usage')");
+  assert.equal(value('state.miniSession.rounds.length'), 5, 'After exhausting the pool, new rounds remain available');
+}
+
+console.log('Wordtrail smoke tests passed: randomized choices, CSP/sanitizer guards, secure storage validation, onboarding, all practice modes, speech fallbacks, backup/restore, and reload recovery.');
 })().catch(error => {
   console.error(error);
   process.exitCode = 1;

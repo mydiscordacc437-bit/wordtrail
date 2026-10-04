@@ -14,7 +14,7 @@ Then visit `http://localhost:4173`.
 - A short starter round matched to the learner’s chosen level and setting
 - Five context worlds with **50 scene cards** (10 per setting)
 - Clearly labeled practice goals: choosing from context, near-synonyms, opposites, common phrases, listening, and short stories
-- **Synonym Switch**, **Opposite Snap**, **Phrase Finder**, **Listen & Match**, **Story Clues**, and **Recall & Type** (no answer choices), plus a four-turn mixed sampler that varies its skills and order across sessions
+- **Synonym Switch**, **Opposite Snap**, **Phrase Finder**, **Listen & Match**, **Story Clues**, **Recall & Type** (no answer choices), and **Usage Studio** (1,000 distinct tasks across 125 common expressions), plus a four-turn mixed sampler that varies its skills and order across sessions
 - Practice questions rotate locally by game and, in the cloud build, by signed-in account; a pool is reused once there are not enough unseen questions. The four-turn sampler varies its skills and reserves one typed recall turn for a due word when available. This small history is separate from progress backups and is not synced across devices.
 - Multiple-choice options are shuffled per round across scene lessons, mini-games, and Tone Shift; the chosen order is validated and retained when an active round resumes
 - Typed recall accepts capitalization differences, offers an optional clue, and saves an unfinished answer draft across refreshes
@@ -54,6 +54,7 @@ With Node.js 18 or later:
 
 ```sh
 node tests/academy-data-smoke.mjs
+node tests/usage-data-smoke.mjs
 node tests/smoke.cjs
 node tests/supabase-smoke.cjs
 ```

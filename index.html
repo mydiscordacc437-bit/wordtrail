@@ -1408,7 +1408,164 @@ body.dark-theme .week-card .eyebrow { color: var(--text-muted); }
       { id: 'listen-polite', type: 'listen', wordId: 'polite', audioWord: 'polite', prompt: 'Listen, then choose the word you hear.', options: ['polite', 'police', 'policy', 'politely'], answer: 'polite', explanation: 'Polite has two syllables and ends with a “t” sound. Listen for the final consonant.', clue: 'The sound is available from the speaker button; no recording is sent.' }
     ];
 
+
+    // Original intermediate-level usage situations. One stable concept ID yields eight
+    // distinct recognition/interpretation tasks; variations share a concept, not a new fact.
+    // Version v1 IDs and row order are immutable: changing either alters canonical options
+    // on an unfinished round. Add new concepts only with a new bank version/migration.
+    const ROWS = `
+    work|follow up|The client has not replied to yesterday's proposal; send a polite message asking if they have questions.|contact someone again after an earlier exchange
+    work|meet a deadline|The report is due Friday, so the team rearranges its schedule to submit it on time.|finish work by the agreed date
+    work|raise a concern|A colleague notices a possible safety problem and tells the manager before anyone gets hurt.|bring a worry to someone's attention
+    work|reach an agreement|After discussing the price and delivery date, both sides accept the same terms.|settle on terms everyone accepts
+    work|take responsibility|The shipment was sent to the wrong address; Noor admits the mistake and arranges a correction.|accept ownership of a task or mistake
+    work|keep someone updated|The repair will take longer than expected; the technician sends the customer a brief progress message.|continue giving someone current information
+    work|set priorities|With three urgent requests arriving at once, the team decides which matters most.|decide what should be done first
+    work|make a decision|The manager compares the two proposals and finally chooses the less expensive option.|choose between available options
+    work|address an issue|Several customers cannot log in; the support team investigates and fixes the problem.|deal directly with a problem
+    work|request clarification|The instructions say 'soon' but give no date, so Rina asks when the work is actually due.|ask for an unclear point to be explained
+    work|provide feedback|After reading the draft, a colleague describes what works and suggests two improvements.|give a response about someone's work
+    work|make an adjustment|The first schedule conflicts with the school holiday, so the organiser changes the date.|change something slightly to make it work better
+    work|manage expectations|Delivery may take a week, so the seller states that clearly rather than promising tomorrow.|help others form a realistic idea of what will happen
+    work|reach out|A former classmate works in the field; Mina sends them a message to ask about entry-level roles.|contact someone to start a conversation
+    work|take into account|Before choosing the venue, the organiser considers accessibility and travel time.|consider a relevant factor when deciding
+    work|work out a solution|The original plan will not fit the budget, so the group develops another workable approach.|find a practical answer to a problem
+    work|stick to the plan|The team agreed on a route; despite minor distractions, they continue with that route.|continue following an agreed course of action
+    work|share the workload|One person cannot finish all the boxes, so four coworkers divide the packing.|divide tasks among several people
+    work|ask for input|Before changing the website, Sam invites the support team to offer their ideas.|request another person's ideas or opinion
+    work|run into a problem|During setup, the printer stops connecting and delays the morning shift.|encounter a difficulty unexpectedly
+    work|look into it|A customer reports an incorrect charge; the clerk promises to check the records.|investigate a question or complaint
+    work|come up with an idea|The usual poster is not attracting visitors, so a student suggests a short demonstration.|think of a new possibility
+    work|put together a proposal|The team collects costs, dates and sketches into a document for the director.|assemble a plan for consideration
+    work|carry out a task|After the manager approves the checklist, the crew completes each step.|perform an assigned piece of work
+    work|hand over a project|On her last day, Aisha gives the new coordinator the files and explains what remains.|transfer responsibility to someone else
+    school|pay attention|The teacher explains a new method; the students listen closely instead of chatting.|listen or watch carefully
+    school|take notes|During the guest lecture, Rafi writes down the main points for later revision.|write brief records of important information
+    school|hand in an assignment|The essay is finished, so Mei submits it to the teacher before the due date.|submit completed schoolwork
+    school|catch up|After missing two classes, Salma studies the notes to reach the same point as her classmates.|recover progress after falling behind
+    school|figure out|The graph seems confusing at first; after trying two examples, the students understand it.|understand something through thought or effort
+    school|check your work|Before submitting the calculation, Tariq reads it again to find mistakes.|review a completed task for errors
+    school|draw a conclusion|After comparing the survey results, the class states what the evidence suggests.|form a judgment from evidence
+    school|make a point|During the discussion, Nila explains one reason why the plan might fail.|express an argument or observation
+    school|back up a claim|The speaker mentions a source and shows figures to support the statement.|provide evidence for an assertion
+    school|look up a word|The passage contains an unfamiliar term, so Irfan checks its meaning in a dictionary.|search for the meaning of a word
+    school|keep track of progress|A student records each practice score to see whether the method is helping.|monitor how something develops over time
+    school|break down a problem|The equation looks too large, so the group solves its smaller parts one by one.|divide a complex problem into manageable parts
+    school|work through an example|Before tackling the exercise alone, the class follows a complete sample step by step.|study a sample carefully from start to finish
+    school|revise a draft|After receiving comments, a student rewrites the introduction and improves the conclusion.|change an early version of a piece of writing
+    school|compare and contrast|The question asks how two stories are alike and how they differ.|examine similarities and differences
+    school|take part in a discussion|Rather than remaining silent, Eva offers an idea and listens to the others.|participate in a conversation about a topic
+    school|ask a follow-up question|After the explanation, a learner asks for an example of the final step.|ask another question to learn more
+    school|put an idea into words|A learner understands the diagram but struggles to explain it aloud.|express a thought clearly in language
+    school|see the bigger picture|The class studies how several separate events are connected across decades.|understand the wider context of individual details
+    school|make a connection|A reader notices that today's lesson relates to a topic from last term.|recognise a link between ideas
+    school|test an assumption|Before trusting the result, the group checks whether their initial belief was true.|check whether an unproved belief holds
+    school|give an example|The explanation feels abstract, so the teacher describes a real situation.|illustrate an idea with a particular case
+    school|stay on topic|The discussion drifts to films; the chair brings it back to the assigned reading.|keep talking about the intended subject
+    school|sum up|At the end of the presentation, Farah states the three key findings briefly.|state the main ideas briefly
+    school|meet the requirements|The essay includes the sources, length and sections specified in the instructions.|satisfy the stated conditions
+    travel|miss a connection|The first bus is late, and the traveller arrives after the next train has left.|fail to catch a planned onward service
+    travel|change plans|Rain closes the walking trail, so the group chooses a museum instead.|choose a different course of action
+    travel|make a reservation|The hotel may be full, so the family books a room ahead of time.|arrange a place in advance
+    travel|check in|At the hotel desk, the guest confirms a reservation and receives a room key.|register arrival for a booked journey or stay
+    travel|find your way|Without a guide, the visitors use signs to reach the correct platform.|navigate to the intended destination
+    travel|ask for directions|The address is unfamiliar, so Omar asks a passerby which street to take.|request guidance about a route
+    travel|allow extra time|The road can be busy, so the family leaves early enough for possible delays.|plan additional time for uncertainty
+    travel|take a detour|The bridge is closed, so the driver uses a longer road around it.|use an alternative route around an obstacle
+    travel|keep an eye on|While waiting for the train, Anika watches the departure board for changes.|watch something for updates or trouble
+    travel|travel light|For a two-day trip, Farhan packs only what he can carry in a small bag.|bring little luggage on a journey
+    travel|make the most of|With only one afternoon in the city, the visitors plan carefully to enjoy it fully.|use an opportunity as well as possible
+    travel|stick to a budget|The group agrees to spend no more than a set amount on meals and transport.|avoid spending more than planned
+    travel|check the schedule|Before leaving home, the traveller confirms when the last bus departs.|verify planned departure or arrival times
+    travel|get around|The town has frequent buses, making it easy to move between neighbourhoods.|move from place to place locally
+    travel|stop by|On the way to the station, Mina visits a friend briefly.|visit a place or person for a short time
+    travel|set off|At sunrise, the group leaves home and begins the long journey.|begin a journey
+    travel|arrive on time|Despite traffic, the family reaches the terminal before departure.|reach a place at the expected time
+    travel|lose your bearings|After several turns in an unfamiliar area, the visitors no longer know where they are.|become unsure of your location or direction
+    travel|plan ahead|Because seats fill quickly, the student buys a ticket a week before travelling.|prepare in advance rather than at the last minute
+    travel|take a break|After hours on the road, the driver stops to rest and drink water.|pause an activity for rest
+    travel|make your way back|After the concert, the friends return slowly to the bus stop.|go back towards a previous place
+    travel|ask around|No one at the desk knows the answer, so the traveller asks several other people.|ask multiple people for information
+    travel|run out of time|The museum closes at five, and the visitors cannot see the final gallery.|have no time left to complete something
+    travel|keep in touch|After moving abroad, the friends continue calling each other every month.|maintain contact despite distance
+    travel|pick someone up|After the late flight, Asif drives to the airport to collect his sister.|collect someone by vehicle
+    home|sort things out|Two roommates disagree about cleaning and sit down to settle the arrangement.|resolve a practical disagreement or confusion
+    home|lend a hand|The neighbour has too many bags, so Shila offers to carry two upstairs.|help someone with a task
+    home|put off a chore|The floor needs cleaning, but Ali delays the job until the weekend.|postpone a household task
+    home|make time for|Despite a busy week, the family protects one evening to eat together.|reserve time for something important
+    home|check in with someone|A friend has been quiet lately, so Sam sends a message to ask how they are.|contact someone to see how they are doing
+    home|clear up a misunderstanding|Two friends realise they meant different dates and explain what happened.|resolve confusion about what someone meant
+    home|make a compromise|One roommate wants music and another needs quiet; they agree on a limited hour.|reach a middle ground by giving up part of each preference
+    home|bring up a topic|During dinner, Tara starts a conversation about sharing the bills.|introduce a subject for discussion
+    home|set a boundary|When a friend calls during study hours, Lila explains when she can talk instead.|state a reasonable limit on what you can accept
+    home|take turns|Two siblings both want the computer, so each uses it for thirty minutes.|do something one after the other
+    home|keep a promise|Rana said he would water the plants and does it before leaving.|do what you said you would do
+    home|make room|A guest is arriving, so the family moves a table to create more space.|create space for someone or something
+    home|pitch in|Everyone helps prepare dinner instead of leaving all the work to one person.|contribute to a shared task
+    home|work something out|Two friends cannot meet Saturday, so they find a time that suits both.|find a workable arrangement
+    home|look after someone|While the parents are away, an aunt cares for the younger children.|take care of another person
+    home|tidy up|Before the guests arrive, the children put the scattered toys away.|make a place neat
+    home|come to terms with|After the move, a student gradually accepts that the old neighbourhood is far away.|gradually accept a difficult reality
+    home|give someone space|A friend is upset and asks for a little time alone before talking.|allow someone time or privacy
+    home|speak up|Nobody has noticed the broken step, so Mina tells the group about the danger.|say something openly instead of staying silent
+    home|make a good impression|At the first meeting, Saira listens carefully and arrives prepared.|create a favourable first opinion
+    home|keep an open mind|The proposed dish is unfamiliar, but Amir agrees to taste it before judging.|consider something without rejecting it immediately
+    home|take care of|Before going away, Liza checks that the plants have water.|attend to a need or responsibility
+    home|settle in|After moving, the family unpacks and begins to feel comfortable in the new place.|become comfortable in a new place
+    home|hear someone out|Although he disagrees, Rahul listens until his friend has finished explaining.|listen to a person's full explanation
+    home|get used to|At first the earlier bus feels strange, but after a month it seems normal.|become familiar with a change
+    community|spread the word|The clinic changes its hours, and volunteers tell neighbours about the new schedule.|tell many people about information
+    community|raise awareness|A group explains why clean water matters through posters and a school talk.|help people understand an issue
+    community|take action|After noticing litter by the river, residents organise a cleanup.|do something practical about a problem
+    community|work together|Neighbours share tools and time to repair the common garden.|cooperate towards a shared goal
+    community|make a difference|One volunteer teaches reading every week and several learners improve.|have a positive effect
+    community|show support|Friends attend the fundraiser and encourage the people organising it.|express encouragement or practical help
+    community|speak out|Residents publicly explain why the unsafe crossing needs repair.|state an opinion openly about a problem
+    community|follow through|The committee promised to fix the tap and completes the repair next week.|finish what you promised or started
+    community|take the lead|When nobody is organising the event, Priya volunteers to coordinate it.|accept primary responsibility for directing a task
+    community|bring people together|The neighbourhood meal gives families a chance to meet one another.|create an opportunity for people to connect
+    community|build trust|The new volunteer keeps every appointment and explains decisions honestly.|develop confidence in someone's reliability
+    community|listen to concerns|Before changing the park, planners hear residents' worries about safety.|pay attention to people's worries
+    community|make an effort|Although learning the route is difficult, the volunteer tries again each week.|try deliberately to do something
+    community|give back|After receiving help as a child, Hasan volunteers at the same library.|help a community that has helped you
+    community|set an example|The older students put their rubbish in bins and younger pupils copy them.|show others a good way to behave
+    community|keep things running|When the coordinator is ill, others manage the centre's daily activities.|maintain the operation of a service
+    community|look out for|During the heat wave, neighbours check that older residents have water.|watch over someone's wellbeing
+    community|step in|The regular organiser is absent, so Maya temporarily leads the meeting.|take someone's place when help is needed
+    community|come together|After the storm, residents gather and help clear the street.|unite for a shared purpose
+    community|get involved|Instead of only watching, a student joins the neighbourhood clean-up.|participate actively
+    community|make a contribution|A local baker brings fresh bread for the community meal, helping the volunteers serve everyone.|provide something helpful to a joint effort
+    community|reach a wider audience|The library shares its reading event online so more people hear about it.|communicate with more people
+    community|make your voice heard|At the public meeting, residents explain what they want changed.|ensure your opinion is considered
+    community|take part|A new resident joins the community gardening day and helps neighbours prepare the soil.|participate in an event
+    community|keep someone informed|The organisers send volunteers any changes to the start time.|continue telling someone relevant updates
+    `.trim().split('\n').map(line => {
+      const [topic, phrase, scene, meaning] = line.trim().split('|');
+      return { topic, phrase, scene, meaning, id: phrase.toLowerCase().replace(/[^a-z0-9]+/g, '-') };
+    });
+
+    // Two different tasks (select an expression / interpret it) in four communicative
+    // settings. Every task has a stable ID and canonical answer/options for reloads.
+    const SETTINGS = [
+      ['A friend asks for advice', 'Which expression would you use to describe this situation?', 'What does the expression mean here?'],
+      ['You explain this to a classmate', 'Which phrase captures the action most precisely?', 'Which interpretation best fits the context?'],
+      ['You write a short update', 'Which natural expression sums up the situation?', 'How would you explain the expression in plain English?'],
+      ['You discuss what happened', 'Which expression describes the key action?', 'Which reading is supported by the details?']
+    ];
+    const USAGE_CONCEPTS = ROWS;
+    const USAGE_ROUNDS = ROWS.flatMap((item, index) => {
+      const peers = ROWS.filter(other => other.topic === item.topic && other.id !== item.id);
+      return SETTINGS.flatMap(([setting, choose, interpret], settingIndex) => {
+        const distractors = [1, 7, 13].map(offset => peers[(index * 3 + settingIndex * 5 + offset) % peers.length]);
+        return [
+          { id: `usage-v1-${item.id}-${settingIndex}-phrase`, type: 'usage', conceptId: item.id, label: 'CHOOSE AN EXPRESSION', scene: setting, sentence: item.scene, prompt: choose, options: [item.phrase, ...distractors.map(row => row.phrase)], answer: item.phrase, explanation: `${item.phrase} means ${item.meaning}. By contrast, ${distractors[0].phrase} means ${distractors[0].meaning}.` },
+          { id: `usage-v1-${item.id}-${settingIndex}-meaning`, type: 'usage', conceptId: item.id, label: 'READ THE MEANING', scene: setting, sentence: `${item.scene} The speaker calls this “${item.phrase}.”`, prompt: interpret, options: [item.meaning, ...distractors.map(row => row.meaning)], answer: item.meaning, explanation: `Here, ${item.phrase} means ${item.meaning}. By contrast, ${distractors[0].phrase} means ${distractors[0].meaning}.` }
+        ];
+      });
+    });
+
     const GAME_INFO = {
+      usage: { name: 'Usage Studio', icon: '💬', label: 'COMMON ENGLISH IN CONTEXT', description: 'Choose or interpret everyday expressions in realistic situations. Built for intermediate learners.', learning: 'Distinguish natural expressions and their precise meanings.', count: `${USAGE_ROUNDS.length} practice tasks`, color: '#e6ecf5' },
       scene: { name: 'Scene Pick', icon: '🧭', label: 'CHOOSE BY CONTEXT', description: 'Read a short situation and choose the word that fits it best.', learning: 'Use sentence clues to choose a word.', count: '50 scene cards', color: '#e8f0dc' },
       synonym: { name: 'Synonym Switch', icon: '🔁', label: 'SIMILAR MEANING', description: 'Find a nearby word, then notice how the tone or strength changes.', learning: 'Tell near-synonyms apart.', count: `${SYNONYM_ROUNDS.length} quick rounds`, color: '#e1edf3' },
       antonym: { name: 'Opposite Snap', icon: '↔️', label: 'OPPOSITE MEANING', description: 'Choose the opposite that makes sense in this sentence.', learning: 'Use opposites in context.', count: `${ANTONYM_ROUNDS.length} quick rounds`, color: '#f5e8dc' },
@@ -1484,7 +1641,7 @@ body.dark-theme .week-card .eyebrow { color: var(--text-muted); }
     ];
 
     const QUESTION_BY_ID = Object.assign(Object.create(null), Object.fromEntries(QUESTIONS.map(q => [q.id, q])));
-    const ROUND_BY_ID = Object.assign(Object.create(null), Object.fromEntries([...SYNONYM_ROUNDS, ...ANTONYM_ROUNDS, ...PHRASE_ROUNDS, ...STORY_ROUNDS, ...LISTEN_ROUNDS].map(round => [round.id, round])));
+    const ROUND_BY_ID = Object.assign(Object.create(null), Object.fromEntries([...SYNONYM_ROUNDS, ...ANTONYM_ROUNDS, ...PHRASE_ROUNDS, ...STORY_ROUNDS, ...LISTEN_ROUNDS, ...USAGE_ROUNDS].map(round => [round.id, round])));
     const STORAGE_KEY = 'wordtrail-progress-v1';
     const SESSION_STORAGE_KEY = 'wordtrail-active-session-v1';
     const STRETCH_WORD_IDS = new Set(['concise', 'diplomatic', 'frugal', 'hospitable', 'serene', 'bustling', 'murmured']);
@@ -2017,7 +2174,7 @@ body.dark-theme .week-card .eyebrow { color: var(--text-muted); }
       Object.values(value).forEach(child => deepFreeze(child, seen));
       return value;
     }
-    deepFreeze([ENVIRONMENTS, QUESTIONS, RELATED_WORDS, ANTONYMS, SYNONYM_ROUNDS, ANTONYM_ROUNDS, PHRASE_ROUNDS, STORY_ROUNDS, LISTEN_ROUNDS, NUANCE_SETS, TONE_SCENARIOS, QUESTION_BY_ID, ROUND_BY_ID, GAME_INFO, LEVELS, ACCENT_OPTIONS, UI_TRANSLATIONS, ONBOARDING_LANGUAGES, WORD_GLOSSES, STARTER_PATHS, REVIEW_INTERVAL_DAYS, DEFAULT_PROGRESS, ACADEMY_CONTENT]);
+    deepFreeze([ENVIRONMENTS, QUESTIONS, RELATED_WORDS, ANTONYMS, SYNONYM_ROUNDS, ANTONYM_ROUNDS, PHRASE_ROUNDS, STORY_ROUNDS, LISTEN_ROUNDS, USAGE_CONCEPTS, USAGE_ROUNDS, NUANCE_SETS, TONE_SCENARIOS, QUESTION_BY_ID, ROUND_BY_ID, GAME_INFO, LEVELS, ACCENT_OPTIONS, UI_TRANSLATIONS, ONBOARDING_LANGUAGES, WORD_GLOSSES, STARTER_PATHS, REVIEW_INTERVAL_DAYS, DEFAULT_PROGRESS, ACADEMY_CONTENT]);
     const loadedProgress = loadProgress();
     const recoveredSession = loadActiveSession();
     const state = {
@@ -2063,8 +2220,8 @@ body.dark-theme .week-card .eyebrow { color: var(--text-muted); }
       if (!stored || typeof stored !== 'object' || Array.isArray(stored)) throw new Error('Progress must be an object.');
       const array = value => Array.isArray(value) ? value.filter(id => hasOwn(QUESTION_BY_ID, id)) : [];
       const count = value => Number.isFinite(value) && value >= 0 ? Math.floor(value) : 0;
-      const gameIds = ['scene', 'synonym', 'antonym', 'phrase', 'listen', 'story', 'recall', 'daily', 'review', 'tone'];
-      const statIds = ['scene', 'synonym', 'antonym', 'phrase', 'listen', 'story', 'recall'];
+      const gameIds = ['scene', 'synonym', 'antonym', 'phrase', 'listen', 'story', 'recall', 'usage', 'daily', 'review', 'tone'];
+      const statIds = ['scene', 'synonym', 'antonym', 'phrase', 'listen', 'story', 'recall', 'usage'];
       const totalAnswered = count(stored.totalAnswered);
       const totalCorrect = Math.min(totalAnswered, count(stored.totalCorrect));
       const runs = Object.fromEntries(gameIds.map(id => [id, count(stored.gameRuns && stored.gameRuns[id])]));
@@ -2203,7 +2360,7 @@ body.dark-theme .week-card .eyebrow { color: var(--text-muted); }
             };
           }
         }
-        if (saved.mini && ['daily', 'review', 'synonym', 'antonym', 'phrase', 'story', 'listen', 'recall'].includes(saved.mini.mode)) {
+        if (saved.mini && ['daily', 'review', 'synonym', 'antonym', 'phrase', 'story', 'listen', 'recall', 'usage'].includes(saved.mini.mode)) {
           const roundIds = Array.isArray(saved.mini.roundIds) ? saved.mini.roundIds.slice(0, 5) : [];
           const savedOptionOrders = Array.isArray(saved.mini.optionOrders) ? saved.mini.optionOrders : [];
           const canonicalRounds = roundIds.map(id => {
@@ -2554,9 +2711,9 @@ body.dark-theme .week-card .eyebrow { color: var(--text-muted); }
         const parsed = JSON.parse(localStorage.getItem(key) || 'null');
         if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
           const clean = Object.create(null);
-          for (const [mode, ids] of Object.entries(parsed).slice(0, 20)) {
+          for (const [mode, ids] of Object.entries(parsed).slice(0, 40)) {
             if (/^[a-z-]{1,30}$/.test(mode) && Array.isArray(ids))
-              clean[mode] = ids.filter(id => typeof id === 'string' && /^[a-z0-9-]{1,60}$/.test(id)).slice(-100);
+              clean[mode] = ids.filter(id => typeof id === 'string' && /^[a-z0-9-]{1,100}$/.test(id)).slice(-1200);
           }
           practiceHistoryMemory.set(key, clean);
           return clean;
@@ -2569,16 +2726,28 @@ body.dark-theme .week-card .eyebrow { color: var(--text-muted); }
       practiceHistoryMemory.delete(key);
       try { localStorage.removeItem(key); } catch (error) { /* In-memory rotation is also reset. */ }
     }
-    function rotatePractice(items, count, mode, weightOf = () => 1) {
+    function rotatePractice(items, count, mode, weightOf = () => 1, groupOf = item => item.id) {
       const pool = shuffled(items);
       const history = readPracticeHistory();
       const recent = history[mode] || [];
-      const lastUsed = id => recent.lastIndexOf(id);
+      const recency = new Map(recent.map((id, index) => [id, index]));
+      const lastUsed = id => recency.get(id) ?? -1;
       // The shuffle breaks ties without always following the same content order.
       const tieScores = new Map(pool.map(item => [item.id, Math.pow(Math.random(), 1 / weightOf(item))]));
       pool.sort((a, b) => lastUsed(a.id) - lastUsed(b.id) || tieScores.get(b.id) - tieScores.get(a.id));
-      const selected = pool.slice(0, count);
-      history[mode] = [...recent, ...selected.map(item => item.id)].slice(-100);
+      const selected = [];
+      const groups = new Set();
+      for (const item of pool) {
+        if (groups.has(groupOf(item))) continue;
+        selected.push(item);
+        groups.add(groupOf(item));
+        if (selected.length === count) break;
+      }
+      if (selected.length < count) for (const item of pool) {
+        if (!selected.includes(item)) selected.push(item);
+        if (selected.length === count) break;
+      }
+      history[mode] = [...recent, ...selected.map(item => item.id)].slice(-1200);
       const key = practiceHistoryKey();
       practiceHistoryMemory.set(key, history);
       try { localStorage.setItem(key, JSON.stringify(history)); } catch (error) { /* Still rotates in memory. */ }
@@ -2714,6 +2883,21 @@ body.dark-theme .week-card .eyebrow { color: var(--text-muted); }
         });
         if (reviewQuestion) rounds.push(makeRecallMiniRound(reviewQuestion));
         rounds = shuffled(rounds);
+      } else if (mode === 'usage') {
+        const history = readPracticeHistory().usage || [];
+        const seen = new Set(history);
+        const unseen = USAGE_ROUNDS.filter(round => !seen.has(round.id));
+        const lastConcepts = new Set(history.slice(-5).map(id => ROUND_BY_ID[id]?.conceptId));
+        if (unseen.length > 0 && unseen.length < 5) {
+          const unseenFirst = rotatePractice(unseen, unseen.length, 'usage', () => 1, round => round.conceptId);
+          const groups = new Set(unseenFirst.map(round => round.conceptId));
+          const remainder = USAGE_ROUNDS.filter(round => !groups.has(round.conceptId));
+          rounds = [...unseenFirst, ...rotatePractice(remainder, 5 - unseenFirst.length, 'usage', () => 1, round => round.conceptId)];
+        } else {
+          const pool = unseen.length ? unseen : USAGE_ROUNDS;
+          const differentConcepts = pool.filter(round => !lastConcepts.has(round.conceptId));
+          rounds = rotatePractice(differentConcepts.length >= 5 ? differentConcepts : pool, 5, 'usage', () => 1, round => round.conceptId);
+        }
       } else if (mode === 'recall') {
         rounds = sampleForLevel(everydayQuestions(), 4, state.progress.level, 'recall').map(makeRecallMiniRound);
       } else {
@@ -3024,7 +3208,7 @@ body.dark-theme .week-card .eyebrow { color: var(--text-muted); }
       return `<div class="page"><header class="page-header"><div class="eyebrow">PRACTICE · NO TIMER</div><h1>What would you like to practice?</h1><p>Each activity has one clear goal. Choose a short round; you can switch activities whenever you like.</p></header>${suggestion}
         <section class="sampler-card"><div><div class="eyebrow">NOT SURE? START WITH THIS</div><h2>Try four different skills.</h2><p>Four changing activities drawn from context, similar words, opposites, phrases, listening, stories, and typed recall. When a word is due, one turn helps you remember it.</p><button class="btn btn-primary btn-small" data-action="start-daily-mix">Start the four-part sampler ${iconArrow()}</button></div><div class="sampler-steps" aria-hidden="true"><span>Choose</span><b>+</b><span>Listen</span><b>+</b><span>Read</span><b>+</b><span>Recall</span></div><div class="sampler-played">${dailyRuns} sampler${dailyRuns === 1 ? '' : 's'} completed</div></section>
         <section class="practice-section"><div class="section-heading"><div><h2>Words and phrases</h2><p>Choose a word goal before you start.</p></div></div><div class="game-grid">${['scene','synonym','antonym','phrase'].map(gameId => renderGameCard(gameId)).join('')}</div></section>
-        <section class="practice-section"><div class="section-heading"><div><h2>Listen, read, and recall</h2><p>Hear a word, read a short situation, or retrieve a word from memory.</p></div></div><div class="game-grid learning-grid">${['listen','story','recall'].map(gameId => renderGameCard(gameId)).join('')}</div><p class="voice-note"><strong>Pronunciation:</strong> Choose an accent in the top bar. Audio uses the browser’s speech engine and available English voices; if the exact accent is unavailable, the app will tell you which voice it uses instead. A Google-named voice is preferred when your device provides one. This standalone app is not connected to Google Cloud Text-to-Speech.</p></section>
+        <section class="practice-section"><div class="section-heading"><div><h2>Listen, read, and recall</h2><p>Hear a word, read a short situation, or retrieve a word from memory.</p></div></div><div class="game-grid learning-grid">${['listen','story','recall','usage'].map(gameId => renderGameCard(gameId)).join('')}</div><p class="voice-note"><strong>Pronunciation:</strong> Choose an accent in the top bar. Audio uses the browser’s speech engine and available English voices; if the exact accent is unavailable, the app will tell you which voice it uses instead. A Google-named voice is preferred when your device provides one. This standalone app is not connected to Google Cloud Text-to-Speech.</p></section>
         <div class="tone-cta"><div><h3>Choose words for the situation</h3><p>Tone Shift helps you practice a warmer, clearer, or more formal message for a friend, teammate, or teacher.</p></div><button class="btn btn-light btn-small" data-action="start-tone">Try Tone Shift ${iconArrow()}</button></div>
         <p class="gentle-footer">Your streak is a record, not a requirement. Missing a day never removes words or progress.</p></div>`;
     }
@@ -3262,7 +3446,9 @@ body.dark-theme .week-card .eyebrow { color: var(--text-muted); }
       const near = word ? (RELATED_WORDS[word.id] || []) : [];
       const opposite = word ? (ANTONYMS[word.id] || []) : [];
       const sentence = round.sentence ? escapeHtml(round.sentence).replace('____', `<span class="blank-slot">${round.type === 'recall' ? 'your word' : 'your words'}</span>`) : '';
-      const roundContent = round.story
+      const roundContent = round.type === 'usage'
+        ? `<div class="story-passage"><div class="eyebrow">${escapeHtml(round.scene)}</div><p>${sentence}</p></div>`
+        : round.story
         ? `<div class="story-passage"><div class="eyebrow">${escapeHtml(round.scene || 'SHORT STORY')}</div><p>${escapeHtml(round.story)}</p></div>`
         : round.type === 'listen'
           ? `<div class="listen-controls"><button class="listen-button" data-action="speak-word" data-word="${escapeHtml(round.audioWord)}" aria-label="Play ${escapeHtml(round.audioWord)} in ${escapeHtml(accentLabel())}" ${speechDisabledAttributes()}><span class="listen-icon" aria-hidden="true">${speakerIcon()}</span><span><strong>Play the word</strong><small>${escapeHtml(accentLabel())}</small></span></button><button class="listen-slow-button" data-action="speak-word" data-word="${escapeHtml(round.audioWord)}" data-rate="slow" ${speechDisabledAttributes()}>Play slowly</button></div>`
@@ -3276,15 +3462,15 @@ body.dark-theme .week-card .eyebrow { color: var(--text-muted); }
           else if (option === session.choice) status = 'incorrect';
           else status = 'dimmed';
         }
-        return `<div class="option-row"><button class="option-button ${status}" data-action="mini-answer" data-answer="${escapeHtml(option)}" ${showFeedback ? 'disabled' : ''} aria-label="Option ${letters[index]}: ${escapeHtml(option)}"><span class="option-letter">${letters[index]}</span><span class="option-word">${escapeHtml(option)}</span></button>${round.type === 'listen' ? '' : speakerButton(option)}</div>`;
+        return `<div class="option-row"><button class="option-button ${status}" data-action="mini-answer" data-answer="${escapeHtml(option)}" ${showFeedback ? 'disabled' : ''} aria-label="Option ${letters[index]}: ${escapeHtml(option)}"><span class="option-letter">${letters[index]}</span><span class="option-word">${escapeHtml(option)}</span></button>${round.type === 'listen' || (round.type === 'usage' && round.id.endsWith('-meaning')) ? '' : speakerButton(option)}</div>`;
       }).join('');
       let feedback = '';
       if (showFeedback) {
-        feedback = `<section class="feedback-card ${correct ? '' : 'incorrect-feedback'}"><div class="feedback-heading" role="status" aria-live="polite" aria-atomic="true" tabindex="-1"><span class="feedback-check" aria-hidden="true">${correct ? '✓' : '↗'}</span>${correct ? 'Nice fit.' : `The best fit here is “${escapeHtml(round.answer)}.”`}</div>${round.type !== 'phrase' ? `<div class="feedback-word"><span>Word: <strong>${escapeHtml(round.answer)}</strong></span>${speakerButton(round.answer)}</div>` : ''}<p>${escapeHtml(round.explanation)}</p>${round.wordId ? renderGlossLine(round.wordId) : ''}${near.length ? `<div class="related-row"><strong>Near-synonyms:</strong> ${near.map(item => `<span class="related-chip">${escapeHtml(item)}</span>`).join('')}</div>` : ''}${opposite.length ? `<div class="related-row"><strong>Opposites:</strong> ${opposite.map(item => `<span class="related-chip opposite-chip">${escapeHtml(item)}</span>`).join('')}</div>` : ''}<div class="feedback-actions">${word ? `<button class="save-word-button" data-action="toggle-saved" data-id="${word.id}">${state.progress.savedIds.includes(word.id) ? '♥ Saved to wordbook' : '♡ Save this word'}</button>` : '<span class="hint-line" style="margin:0">Small phrase, big difference.</span>'}<button class="btn btn-primary btn-small" data-action="next-mini">${session.index + 1 >= total ? 'See your results' : 'Next turn'} ${iconArrow()}</button></div></section>`;
+        feedback = `<section class="feedback-card ${correct ? '' : 'incorrect-feedback'}"><div class="feedback-heading" role="status" aria-live="polite" aria-atomic="true" tabindex="-1"><span class="feedback-check" aria-hidden="true">${correct ? '✓' : '↗'}</span>${correct ? 'Nice fit.' : `The best fit here is “${escapeHtml(round.answer)}.”`}</div>${!['phrase', 'usage'].includes(round.type) ? `<div class="feedback-word"><span>Word: <strong>${escapeHtml(round.answer)}</strong></span>${speakerButton(round.answer)}</div>` : ''}<p>${escapeHtml(round.explanation)}</p>${round.wordId ? renderGlossLine(round.wordId) : ''}${near.length ? `<div class="related-row"><strong>Near-synonyms:</strong> ${near.map(item => `<span class="related-chip">${escapeHtml(item)}</span>`).join('')}</div>` : ''}${opposite.length ? `<div class="related-row"><strong>Opposites:</strong> ${opposite.map(item => `<span class="related-chip opposite-chip">${escapeHtml(item)}</span>`).join('')}</div>` : ''}<div class="feedback-actions">${word ? `<button class="save-word-button" data-action="toggle-saved" data-id="${word.id}">${state.progress.savedIds.includes(word.id) ? '♥ Saved to wordbook' : '♡ Save this word'}</button>` : '<span class="hint-line" style="margin:0">Small phrase, big difference.</span>'}<button class="btn btn-primary btn-small" data-action="next-mini">${session.index + 1 >= total ? 'See your results' : 'Next turn'} ${iconArrow()}</button></div></section>`;
       }
       const modeTitle = session.mode === 'daily' ? 'Daily sampler' : session.mode === 'review' ? 'Quick review' : meta.name;
-      const asideHeading = round.type === 'listen' ? 'Listen more than once' : round.type === 'story' ? 'Use the story details' : round.type === 'recall' ? 'Start with memory' : 'Notice the context';
-      const asideDescription = round.type === 'listen'
+      const asideHeading = round.type === 'usage' ? 'Notice the intended action' : round.type === 'listen' ? 'Listen more than once' : round.type === 'story' ? 'Use the story details' : round.type === 'recall' ? 'Start with memory' : 'Notice the context';
+      const asideDescription = round.type === 'usage' ? 'Several expressions may be natural English; choose the one supported by this situation. A different action needs a different expression.' : round.type === 'listen'
         ? 'Play the word at normal or slower speed, then match its sound to the spelling. The browser’s speech engine supplies the voice; availability varies by browser and device.'
         : round.type === 'story'
           ? 'Look for the detail that explains the person’s choice. The answer should fit the action, not just the general topic.'
@@ -3297,7 +3483,7 @@ body.dark-theme .week-card .eyebrow { color: var(--text-muted); }
                 : round.type === 'phrase'
                   ? 'Everyday English often pairs certain words together. Choose the phrase that sounds natural in this context.'
                   : 'Use the scene and clue together. The answer should fit the meaning and the situation.';
-      return `<div class="page mini-page"><div class="challenge-top"><button class="back-button" data-action="exit-mini">← &nbsp;All practice types</button><div class="step-count">${escapeHtml(modeTitle)} &nbsp;·&nbsp; Turn ${session.index + 1} of ${total}</div></div><div class="progress-track challenge-progress" role="progressbar" aria-label="Mini-game progress" aria-valuenow="${percent}" aria-valuemin="0" aria-valuemax="100"><span style="width:${percent}%"></span></div><div class="mini-game-layout"><section class="question-card mini-question-card"><div class="mini-mode-pill" style="--game-tint:${meta.color}"><span aria-hidden="true">${meta.icon}</span>${escapeHtml(meta.name)}<span class="mini-band">${word ? escapeHtml(word.band || 'Everyday') : round.type === 'listen' ? 'LISTENING' : round.type === 'recall' ? 'RECALL' : 'EVERYDAY PHRASE'}</span></div><div class="question-label">${escapeHtml(meta.label)}</div><h1>${escapeHtml(round.prompt)}</h1>${roundContent}${round.clue && !['listen', 'recall'].includes(round.type) ? `<div class="hint-line">A clue: ${escapeHtml(round.clue)}</div>${!showFeedback && round.wordId ? renderGlossLine(round.wordId) : ''}` : ''}${round.type === 'recall' ? '' : `<div class="option-list">${options}</div>`}${feedback}</section><aside class="challenge-aside"><section class="aside-card"><div class="aside-tip-icon" aria-hidden="true">✦</div><h3>${asideHeading}</h3><p>${asideDescription}</p></section><section class="aside-card"><h3>This short round</h3><div class="aside-progress-number">${session.correct}<span class="aside-denominator"> / ${session.answered}</span></div><div class="aside-progress-label">best fits so far</div><div class="mini-track"><span style="width:${session.answered ? Math.round((session.correct/session.answered)*100) : 0}%"></span></div><p style="margin-top:10px">No timer. Stop whenever you need.</p></section></aside></div></div>`;
+      return `<div class="page mini-page"><div class="challenge-top"><button class="back-button" data-action="exit-mini">← &nbsp;All practice types</button><div class="step-count">${escapeHtml(modeTitle)} &nbsp;·&nbsp; Turn ${session.index + 1} of ${total}</div></div><div class="progress-track challenge-progress" role="progressbar" aria-label="Mini-game progress" aria-valuenow="${percent}" aria-valuemin="0" aria-valuemax="100"><span style="width:${percent}%"></span></div><div class="mini-game-layout"><section class="question-card mini-question-card"><div class="mini-mode-pill" style="--game-tint:${meta.color}"><span aria-hidden="true">${meta.icon}</span>${escapeHtml(meta.name)}<span class="mini-band">${word ? escapeHtml(word.band || 'Everyday') : round.type === 'listen' ? 'LISTENING' : round.type === 'recall' ? 'RECALL' : round.type === 'usage' ? 'INTERMEDIATE' : 'EVERYDAY PHRASE'}</span></div><div class="question-label">${escapeHtml(meta.label)}</div><h1>${escapeHtml(round.prompt)}</h1>${roundContent}${round.clue && !['listen', 'recall'].includes(round.type) ? `<div class="hint-line">A clue: ${escapeHtml(round.clue)}</div>${!showFeedback && round.wordId ? renderGlossLine(round.wordId) : ''}` : ''}${round.type === 'recall' ? '' : `<div class="option-list">${options}</div>`}${feedback}</section><aside class="challenge-aside"><section class="aside-card"><div class="aside-tip-icon" aria-hidden="true">✦</div><h3>${asideHeading}</h3><p>${asideDescription}</p></section><section class="aside-card"><h3>This short round</h3><div class="aside-progress-number">${session.correct}<span class="aside-denominator"> / ${session.answered}</span></div><div class="aside-progress-label">best fits so far</div><div class="mini-track"><span style="width:${session.answered ? Math.round((session.correct/session.answered)*100) : 0}%"></span></div><p style="margin-top:10px">No timer. Stop whenever you need.</p></section></aside></div></div>`;
     }
     function renderMiniSummary() {
       const session = state.miniSession;
