@@ -1564,7 +1564,38 @@ body.dark-theme .week-card .eyebrow { color: var(--text-muted); }
       });
     });
 
+
+    // Conversation Lab reuses the authored situations as scaffolding, but changes the
+    // learner's task: recognise, interpret, edit a response, then produce the phrase.
+    // IDs are versioned; a concept's next stage is chosen by the app after feedback.
+    const CONVERSATION_CUES = [
+      ['A classmate asks what this action is called.', 'A friend wants a concise description of what happened.'],
+      ['Someone hears this expression and asks what it means.', 'Explain the expression to a learner in plain English.'],
+      ['A speaker needs one short, natural reply about this action.', 'Edit a short reply so its expression fits the situation.'],
+      ['A friend wants you to supply the expression yourself.', 'Write the expression you would use to describe this action.']
+    ];
+    const CONVERSATION_ROUNDS = USAGE_CONCEPTS.flatMap((item, index) => {
+      const peers = USAGE_CONCEPTS.filter(other => other.topic === item.topic && other.id !== item.id);
+      return CONVERSATION_CUES.flatMap(([first, second], stage) => [first, second].map((cue, variant) => {
+        const alternatives = [2, 9, 16].map(offset => peers[(index * 7 + stage * 3 + variant + offset) % peers.length]);
+        const base = { id: `conversation-v1-${item.id}-${stage}-${variant}`, conceptId: item.id, stage, scene: cue,
+          sentence: item.scene, explanation: `${item.phrase} means ${item.meaning}. In contrast, ${alternatives[0].phrase} means ${alternatives[0].meaning}.` };
+        if (stage === 0) return { ...base, type: 'dialogue', label: 'NOTICE THE ACTION', prompt: variant ? 'Which everyday expression names the action most precisely?' : 'Which expression fits what is happening?',
+          options: [item.phrase, ...alternatives.map(row => row.phrase)], answer: item.phrase };
+        if (stage === 1) return { ...base, type: 'dialogue', label: 'EXPLAIN THE MEANING', sentence: `${item.scene} Someone describes it as “${item.phrase}.”`,
+          prompt: variant ? 'What is the speaker communicating by using this expression?' : 'Which interpretation matches the expression here?',
+          options: [item.meaning, ...alternatives.map(row => row.meaning)], answer: item.meaning };
+        if (stage === 2) return { ...base, type: 'dialogue', label: 'EDIT AN EXPRESSION', sentence: `${item.scene} A draft note used “${alternatives[0].phrase},” but that names a different action.`,
+          prompt: variant ? 'Which expression should replace the draft wording?' : 'Edit the draft: which expression preserves the intended action?',
+          options: [item.phrase, ...alternatives.map(row => row.phrase)], answer: item.phrase };
+        return { ...base, type: 'recall', label: 'TYPE FROM MEMORY', sentence: `${item.scene} The key action is ____.`,
+          prompt: variant ? 'Type the expression that best names the key action.' : 'From memory, which expression fits the situation?',
+          clue: `It means ${item.meaning}.`, answer: item.phrase };
+      }));
+    });
+
     const GAME_INFO = {
+      dialogue: { name: 'Conversation Lab', icon: '🗣️', label: 'RECOGNISE · EXPLAIN · EDIT · TYPE', description: 'Work through four ordered steps for common expressions, from choosing to writing from memory.', learning: 'Choose, interpret, edit, and retrieve useful expressions.', count: `${CONVERSATION_ROUNDS.length} staged tasks`, color: '#e6f1eb' },
       usage: { name: 'Usage Studio', icon: '💬', label: 'COMMON ENGLISH IN CONTEXT', description: 'Choose or interpret everyday expressions in realistic situations. Built for intermediate learners.', learning: 'Distinguish natural expressions and their precise meanings.', count: `${USAGE_ROUNDS.length} practice tasks`, color: '#e6ecf5' },
       scene: { name: 'Scene Pick', icon: '🧭', label: 'CHOOSE BY CONTEXT', description: 'Read a short situation and choose the word that fits it best.', learning: 'Use sentence clues to choose a word.', count: '50 scene cards', color: '#e8f0dc' },
       synonym: { name: 'Synonym Switch', icon: '🔁', label: 'SIMILAR MEANING', description: 'Find a nearby word, then notice how the tone or strength changes.', learning: 'Tell near-synonyms apart.', count: `${SYNONYM_ROUNDS.length} quick rounds`, color: '#e1edf3' },
@@ -1641,7 +1672,7 @@ body.dark-theme .week-card .eyebrow { color: var(--text-muted); }
     ];
 
     const QUESTION_BY_ID = Object.assign(Object.create(null), Object.fromEntries(QUESTIONS.map(q => [q.id, q])));
-    const ROUND_BY_ID = Object.assign(Object.create(null), Object.fromEntries([...SYNONYM_ROUNDS, ...ANTONYM_ROUNDS, ...PHRASE_ROUNDS, ...STORY_ROUNDS, ...LISTEN_ROUNDS, ...USAGE_ROUNDS].map(round => [round.id, round])));
+    const ROUND_BY_ID = Object.assign(Object.create(null), Object.fromEntries([...SYNONYM_ROUNDS, ...ANTONYM_ROUNDS, ...PHRASE_ROUNDS, ...STORY_ROUNDS, ...LISTEN_ROUNDS, ...USAGE_ROUNDS, ...CONVERSATION_ROUNDS].map(round => [round.id, round])));
     const STORAGE_KEY = 'wordtrail-progress-v1';
     const SESSION_STORAGE_KEY = 'wordtrail-active-session-v1';
     const STRETCH_WORD_IDS = new Set(['concise', 'diplomatic', 'frugal', 'hospitable', 'serene', 'bustling', 'murmured']);
@@ -2210,7 +2241,7 @@ body.dark-theme .week-card .eyebrow { color: var(--text-muted); }
       Object.values(value).forEach(child => deepFreeze(child, seen));
       return value;
     }
-    deepFreeze([ENVIRONMENTS, QUESTIONS, RELATED_WORDS, ANTONYMS, SYNONYM_ROUNDS, ANTONYM_ROUNDS, PHRASE_ROUNDS, STORY_ROUNDS, LISTEN_ROUNDS, USAGE_CONCEPTS, USAGE_ROUNDS, NUANCE_SETS, TONE_SCENARIOS, QUESTION_BY_ID, ROUND_BY_ID, GAME_INFO, LEVELS, ACCENT_OPTIONS, UI_TRANSLATIONS, ONBOARDING_LANGUAGES, WORD_GLOSSES, STARTER_PATHS, GUIDED_PATHS, SCENE_DIFFICULTY, REVIEW_INTERVAL_DAYS, DEFAULT_PROGRESS, ACADEMY_CONTENT]);
+    deepFreeze([ENVIRONMENTS, QUESTIONS, RELATED_WORDS, ANTONYMS, SYNONYM_ROUNDS, ANTONYM_ROUNDS, PHRASE_ROUNDS, STORY_ROUNDS, LISTEN_ROUNDS, USAGE_CONCEPTS, USAGE_ROUNDS, CONVERSATION_ROUNDS, NUANCE_SETS, TONE_SCENARIOS, QUESTION_BY_ID, ROUND_BY_ID, GAME_INFO, LEVELS, ACCENT_OPTIONS, UI_TRANSLATIONS, ONBOARDING_LANGUAGES, WORD_GLOSSES, STARTER_PATHS, GUIDED_PATHS, SCENE_DIFFICULTY, REVIEW_INTERVAL_DAYS, DEFAULT_PROGRESS, ACADEMY_CONTENT]);
     const loadedProgress = loadProgress();
     const recoveredSession = loadActiveSession();
     const state = {
@@ -2256,7 +2287,7 @@ body.dark-theme .week-card .eyebrow { color: var(--text-muted); }
       if (!stored || typeof stored !== 'object' || Array.isArray(stored)) throw new Error('Progress must be an object.');
       const array = value => Array.isArray(value) ? value.filter(id => hasOwn(QUESTION_BY_ID, id)) : [];
       const count = value => Number.isFinite(value) && value >= 0 ? Math.floor(value) : 0;
-      const gameIds = ['scene', 'synonym', 'antonym', 'phrase', 'listen', 'story', 'recall', 'usage', 'daily', 'review', 'tone'];
+      const gameIds = ['scene', 'synonym', 'antonym', 'phrase', 'listen', 'story', 'recall', 'usage', 'dialogue', 'daily', 'review', 'tone'];
       const statIds = ['scene', 'synonym', 'antonym', 'phrase', 'listen', 'story', 'recall', 'usage'];
       const totalAnswered = count(stored.totalAnswered);
       const totalCorrect = Math.min(totalAnswered, count(stored.totalCorrect));
@@ -2358,6 +2389,7 @@ body.dark-theme .week-card .eyebrow { color: var(--text-muted); }
       state.toneSession = null;
       saveProgress();
       resetPracticeHistory();
+      clearConversationStages();
       state.view = 'wordbook';
       render();
       showToast('Backup restored. Your previous browser progress was replaced.');
@@ -2396,7 +2428,7 @@ body.dark-theme .week-card .eyebrow { color: var(--text-muted); }
             };
           }
         }
-        if (saved.mini && ['daily', 'review', 'synonym', 'antonym', 'phrase', 'story', 'listen', 'recall', 'usage'].includes(saved.mini.mode)) {
+        if (saved.mini && ['daily', 'review', 'synonym', 'antonym', 'phrase', 'story', 'listen', 'recall', 'usage', 'dialogue'].includes(saved.mini.mode)) {
           const roundIds = Array.isArray(saved.mini.roundIds) ? saved.mini.roundIds.slice(0, 5) : [];
           const savedOptionOrders = Array.isArray(saved.mini.optionOrders) ? saved.mini.optionOrders : [];
           const canonicalRounds = roundIds.map(id => {
@@ -2789,6 +2821,39 @@ body.dark-theme .week-card .eyebrow { color: var(--text-muted); }
       try { localStorage.setItem(key, JSON.stringify(history)); } catch (error) { /* Still rotates in memory. */ }
       return selected;
     }
+    // Local, validated mastery steps are independent of the saved-word schema.
+    const conversationMemory = new Map();
+    function conversationStageKey() { return `${STORAGE_KEY}:conversation-stage-v1`; }
+    function conversationStages() {
+      const key = conversationStageKey();
+      try {
+        const raw = JSON.parse(localStorage.getItem(key) || '{}');
+        if (raw && typeof raw === 'object' && !Array.isArray(raw)) {
+          const clean = Object.create(null);
+          for (const concept of USAGE_CONCEPTS) {
+            const stage = raw[concept.id];
+            if (Number.isInteger(stage) && stage >= 0 && stage <= 4) clean[concept.id] = stage;
+          }
+          conversationMemory.set(key, clean);
+          return clean;
+        }
+      } catch (error) { /* A malformed cache must never block practice. */ }
+      return conversationMemory.get(key) || Object.create(null);
+    }
+    function advanceConversationStage(round) {
+      const stages = conversationStages();
+      const current = stages[round.conceptId] || 0;
+      if (round.stage !== Math.min(current, 3)) return;
+      stages[round.conceptId] = Math.min(4, current + 1);
+      const key = conversationStageKey();
+      conversationMemory.set(key, stages);
+      try { localStorage.setItem(key, JSON.stringify(stages)); } catch (error) { /* Session remains playable. */ }
+    }
+    function clearConversationStages() {
+      const key = conversationStageKey();
+      conversationMemory.delete(key);
+      try { localStorage.removeItem(key); } catch (error) { /* Storage may be disabled. */ }
+    }
     // Every new question gets an unbiased Fisher–Yates option order; saved orders are validated before resume.
     function isOptionOrder(candidate, canonical, keyOf = value => value) {
       if (!Array.isArray(candidate) || candidate.length !== canonical.length) return false;
@@ -2947,6 +3012,14 @@ body.dark-theme .week-card .eyebrow { color: var(--text-muted); }
         });
         if (reviewQuestion) rounds.push(makeRecallMiniRound(reviewQuestion));
         rounds = shuffled(rounds);
+      } else if (mode === 'dialogue') {
+        const stages = conversationStages();
+        const recent = new Set((readPracticeHistory().dialogue || []).slice(-5).map(id => ROUND_BY_ID[id]?.conceptId));
+        const eligible = CONVERSATION_ROUNDS.filter(round => round.stage === Math.min(stages[round.conceptId] || 0, 3));
+        const fresh = eligible.filter(round => !recent.has(round.conceptId));
+        rounds = rotatePractice(fresh.length >= 5 ? fresh : eligible, 5, 'dialogue', () => 1, round => round.conceptId);
+        // Present recognition before interpretation, editing and typed recall.
+        rounds.sort((a, b) => a.stage - b.stage);
       } else if (mode === 'usage') {
         const history = readPracticeHistory().usage || [];
         const seen = new Set(history);
@@ -3006,7 +3079,8 @@ body.dark-theme .week-card .eyebrow { color: var(--text-muted); }
       if (correct) session.correct += 1;
       else if (!session.missedIds.includes(round.id)) session.missedIds.push(round.id);
       session.results.push({ id: round.id, choice: answer, correct });
-      recordActivity(round.wordId ? QUESTION_BY_ID[round.wordId] : null, correct, round.type);
+      if (correct && session.mode === 'dialogue') advanceConversationStage(round);
+      recordActivity(round.wordId ? QUESTION_BY_ID[round.wordId] : null, correct, session.mode === 'dialogue' ? 'dialogue' : round.type);
       render();
     }
     function advanceMiniGame() {
@@ -3272,7 +3346,7 @@ body.dark-theme .week-card .eyebrow { color: var(--text-muted); }
       return `<div class="page"><header class="page-header"><div class="eyebrow">PRACTICE · NO TIMER</div><h1>What would you like to practice?</h1><p>Each activity has one clear goal. Choose a short round; you can switch activities whenever you like.</p></header>${suggestion}
         <section class="sampler-card"><div><div class="eyebrow">NOT SURE? START WITH THIS</div><h2>Try four different skills.</h2><p>Four changing activities drawn from context, similar words, opposites, phrases, listening, stories, and typed recall. When a word is due, one turn helps you remember it.</p><button class="btn btn-primary btn-small" data-action="start-daily-mix">Start the four-part sampler ${iconArrow()}</button></div><div class="sampler-steps" aria-hidden="true"><span>Choose</span><b>+</b><span>Listen</span><b>+</b><span>Read</span><b>+</b><span>Recall</span></div><div class="sampler-played">${dailyRuns} sampler${dailyRuns === 1 ? '' : 's'} completed</div></section>
         <section class="practice-section"><div class="section-heading"><div><h2>Words and phrases</h2><p>Choose a word goal before you start.</p></div></div><div class="game-grid">${['scene','synonym','antonym','phrase'].map(gameId => renderGameCard(gameId)).join('')}</div></section>
-        <section class="practice-section"><div class="section-heading"><div><h2>Listen, read, and recall</h2><p>Hear a word, read a short situation, or retrieve a word from memory.</p></div></div><div class="game-grid learning-grid">${['listen','story','recall','usage'].map(gameId => renderGameCard(gameId)).join('')}</div><p class="voice-note"><strong>Pronunciation:</strong> Choose an accent in the top bar. Audio uses the browser’s speech engine and available English voices; if the exact accent is unavailable, the app will tell you which voice it uses instead. A Google-named voice is preferred when your device provides one. This standalone app is not connected to Google Cloud Text-to-Speech.</p></section>
+        <section class="practice-section"><div class="section-heading"><div><h2>Listen, read, and recall</h2><p>Hear a word, read a short situation, or retrieve a word from memory.</p></div></div><div class="game-grid learning-grid">${['listen','story','recall','usage','dialogue'].map(gameId => renderGameCard(gameId)).join('')}</div><p class="voice-note"><strong>Pronunciation:</strong> Choose an accent in the top bar. Audio uses the browser’s speech engine and available English voices; if the exact accent is unavailable, the app will tell you which voice it uses instead. A Google-named voice is preferred when your device provides one. This standalone app is not connected to Google Cloud Text-to-Speech.</p></section>
         <div class="tone-cta"><div><h3>Choose words for the situation</h3><p>Tone Shift helps you practice a warmer, clearer, or more formal message for a friend, teammate, or teacher.</p></div><button class="btn btn-light btn-small" data-action="start-tone">Try Tone Shift ${iconArrow()}</button></div>
         <p class="gentle-footer">Your streak is a record, not a requirement. Missing a day never removes words or progress.</p></div>`;
     }
@@ -3502,7 +3576,7 @@ body.dark-theme .week-card .eyebrow { color: var(--text-muted); }
       const total = session.rounds.length;
       const complete = session.index + (session.choice !== null ? 1 : 0);
       const percent = Math.round((complete / total) * 100);
-      const meta = GAME_INFO[round.type] || GAME_INFO.scene;
+      const meta = round.id.startsWith('conversation-v1-') ? GAME_INFO.dialogue : GAME_INFO[round.type] || GAME_INFO.scene;
       const showFeedback = session.choice !== null;
       const correct = session.choice !== null && isMiniAnswerCorrect(round, session.choice);
       const letters = ['A', 'B', 'C', 'D'];
@@ -3510,7 +3584,9 @@ body.dark-theme .week-card .eyebrow { color: var(--text-muted); }
       const near = word ? (RELATED_WORDS[word.id] || []) : [];
       const opposite = word ? (ANTONYMS[word.id] || []) : [];
       const sentence = round.sentence ? escapeHtml(round.sentence).replace('____', `<span class="blank-slot">${round.type === 'recall' ? 'your word' : 'your words'}</span>`) : '';
-      const roundContent = round.type === 'usage'
+      const roundContent = round.id.startsWith('conversation-v1-')
+        ? `<div class="story-passage"><div class="eyebrow">${escapeHtml(round.scene)}</div><p>${sentence}</p></div>`
+        : round.type === 'usage'
         ? `<div class="story-passage"><div class="eyebrow">${escapeHtml(round.scene)}</div><p>${sentence}</p></div>`
         : round.story
         ? `<div class="story-passage"><div class="eyebrow">${escapeHtml(round.scene || 'SHORT STORY')}</div><p>${escapeHtml(round.story)}</p></div>`
@@ -3526,15 +3602,15 @@ body.dark-theme .week-card .eyebrow { color: var(--text-muted); }
           else if (option === session.choice) status = 'incorrect';
           else status = 'dimmed';
         }
-        return `<div class="option-row"><button class="option-button ${status}" data-action="mini-answer" data-answer="${escapeHtml(option)}" ${showFeedback ? 'disabled' : ''} aria-label="Option ${letters[index]}: ${escapeHtml(option)}"><span class="option-letter">${letters[index]}</span><span class="option-word">${escapeHtml(option)}</span></button>${round.type === 'listen' || (round.type === 'usage' && round.id.endsWith('-meaning')) ? '' : speakerButton(option)}</div>`;
+        return `<div class="option-row"><button class="option-button ${status}" data-action="mini-answer" data-answer="${escapeHtml(option)}" ${showFeedback ? 'disabled' : ''} aria-label="Option ${letters[index]}: ${escapeHtml(option)}"><span class="option-letter">${letters[index]}</span><span class="option-word">${escapeHtml(option)}</span></button>${round.type === 'listen' || round.id.startsWith('conversation-v1-') || (round.type === 'usage' && round.id.endsWith('-meaning')) ? '' : speakerButton(option)}</div>`;
       }).join('');
       let feedback = '';
       if (showFeedback) {
-        feedback = `<section class="feedback-card ${correct ? '' : 'incorrect-feedback'}"><div class="feedback-heading" role="status" aria-live="polite" aria-atomic="true" tabindex="-1"><span class="feedback-check" aria-hidden="true">${correct ? '✓' : '↗'}</span>${correct ? 'Nice fit.' : `The best fit here is “${escapeHtml(round.answer)}.”`}</div>${!['phrase', 'usage'].includes(round.type) ? `<div class="feedback-word"><span>Word: <strong>${escapeHtml(round.answer)}</strong></span>${speakerButton(round.answer)}</div>` : ''}<p>${escapeHtml(round.explanation)}</p>${round.wordId ? renderGlossLine(round.wordId) : ''}${near.length ? `<div class="related-row"><strong>Near-synonyms:</strong> ${near.map(item => `<span class="related-chip">${escapeHtml(item)}</span>`).join('')}</div>` : ''}${opposite.length ? `<div class="related-row"><strong>Opposites:</strong> ${opposite.map(item => `<span class="related-chip opposite-chip">${escapeHtml(item)}</span>`).join('')}</div>` : ''}<div class="feedback-actions">${word ? `<button class="save-word-button" data-action="toggle-saved" data-id="${word.id}">${state.progress.savedIds.includes(word.id) ? '♥ Saved to wordbook' : '♡ Save this word'}</button>` : '<span class="hint-line" style="margin:0">Small phrase, big difference.</span>'}<button class="btn btn-primary btn-small" data-action="next-mini">${session.index + 1 >= total ? 'See your results' : 'Next turn'} ${iconArrow()}</button></div></section>`;
+        feedback = `<section class="feedback-card ${correct ? '' : 'incorrect-feedback'}"><div class="feedback-heading" role="status" aria-live="polite" aria-atomic="true" tabindex="-1"><span class="feedback-check" aria-hidden="true">${correct ? '✓' : '↗'}</span>${correct ? 'Nice fit.' : `The best fit here is “${escapeHtml(round.answer)}.”`}</div>${!['phrase', 'usage', 'dialogue'].includes(round.type) && !round.id.startsWith('conversation-v1-') ? `<div class="feedback-word"><span>Word: <strong>${escapeHtml(round.answer)}</strong></span>${speakerButton(round.answer)}</div>` : ''}<p>${escapeHtml(round.explanation)}</p>${round.wordId ? renderGlossLine(round.wordId) : ''}${near.length ? `<div class="related-row"><strong>Near-synonyms:</strong> ${near.map(item => `<span class="related-chip">${escapeHtml(item)}</span>`).join('')}</div>` : ''}${opposite.length ? `<div class="related-row"><strong>Opposites:</strong> ${opposite.map(item => `<span class="related-chip opposite-chip">${escapeHtml(item)}</span>`).join('')}</div>` : ''}<div class="feedback-actions">${word ? `<button class="save-word-button" data-action="toggle-saved" data-id="${word.id}">${state.progress.savedIds.includes(word.id) ? '♥ Saved to wordbook' : '♡ Save this word'}</button>` : '<span class="hint-line" style="margin:0">Small phrase, big difference.</span>'}<button class="btn btn-primary btn-small" data-action="next-mini">${session.index + 1 >= total ? 'See your results' : 'Next turn'} ${iconArrow()}</button></div></section>`;
       }
       const modeTitle = session.mode === 'daily' ? 'Daily sampler' : session.mode === 'review' ? 'Quick review' : meta.name;
-      const asideHeading = round.type === 'usage' ? 'Notice the intended action' : round.type === 'listen' ? 'Listen more than once' : round.type === 'story' ? 'Use the story details' : round.type === 'recall' ? 'Start with memory' : 'Notice the context';
-      const asideDescription = round.type === 'usage' ? 'Several expressions may be natural English; choose the one supported by this situation. A different action needs a different expression.' : round.type === 'listen'
+      const asideHeading = round.id.startsWith('conversation-v1-') ? 'Build the expression step by step' : round.type === 'usage' ? 'Notice the intended action' : round.type === 'listen' ? 'Listen more than once' : round.type === 'story' ? 'Use the story details' : round.type === 'recall' ? 'Start with memory' : 'Notice the context';
+      const asideDescription = round.id.startsWith('conversation-v1-') ? 'Choose the expression, explain it, edit a draft, then type it from memory. A missed step returns later without a penalty.' : round.type === 'usage' ? 'Several expressions may be natural English; choose the one supported by this situation. A different action needs a different expression.' : round.type === 'listen'
         ? 'Play the word at normal or slower speed, then match its sound to the spelling. The browser’s speech engine supplies the voice; availability varies by browser and device.'
         : round.type === 'story'
           ? 'Look for the detail that explains the person’s choice. The answer should fit the action, not just the general topic.'
@@ -3547,7 +3623,7 @@ body.dark-theme .week-card .eyebrow { color: var(--text-muted); }
                 : round.type === 'phrase'
                   ? 'Everyday English often pairs certain words together. Choose the phrase that sounds natural in this context.'
                   : 'Use the scene and clue together. The answer should fit the meaning and the situation.';
-      return `<div class="page mini-page"><div class="challenge-top"><button class="back-button" data-action="exit-mini">← &nbsp;All practice types</button><div class="step-count">${escapeHtml(modeTitle)} &nbsp;·&nbsp; Turn ${session.index + 1} of ${total}</div></div><div class="progress-track challenge-progress" role="progressbar" aria-label="Mini-game progress" aria-valuenow="${percent}" aria-valuemin="0" aria-valuemax="100"><span style="width:${percent}%"></span></div><div class="mini-game-layout"><section class="question-card mini-question-card"><div class="mini-mode-pill" style="--game-tint:${meta.color}"><span aria-hidden="true">${meta.icon}</span>${escapeHtml(meta.name)}<span class="mini-band">${word ? escapeHtml(word.band || 'Everyday') : round.type === 'listen' ? 'LISTENING' : round.type === 'recall' ? 'RECALL' : round.type === 'usage' ? 'INTERMEDIATE' : 'EVERYDAY PHRASE'}</span></div><div class="question-label">${escapeHtml(meta.label)}</div><h1>${escapeHtml(round.prompt)}</h1>${roundContent}${round.clue && !['listen', 'recall'].includes(round.type) ? `<div class="hint-line">A clue: ${escapeHtml(round.clue)}</div>${!showFeedback && round.wordId ? renderGlossLine(round.wordId) : ''}` : ''}${round.type === 'recall' ? '' : `<div class="option-list">${options}</div>`}${feedback}</section><aside class="challenge-aside"><section class="aside-card"><div class="aside-tip-icon" aria-hidden="true">✦</div><h3>${asideHeading}</h3><p>${asideDescription}</p></section><section class="aside-card"><h3>This short round</h3><div class="aside-progress-number">${session.correct}<span class="aside-denominator"> / ${session.answered}</span></div><div class="aside-progress-label">best fits so far</div><div class="mini-track"><span style="width:${session.answered ? Math.round((session.correct/session.answered)*100) : 0}%"></span></div><p style="margin-top:10px">No timer. Stop whenever you need.</p></section></aside></div></div>`;
+      return `<div class="page mini-page"><div class="challenge-top"><button class="back-button" data-action="exit-mini">← &nbsp;All practice types</button><div class="step-count">${escapeHtml(modeTitle)} &nbsp;·&nbsp; Turn ${session.index + 1} of ${total}</div></div><div class="progress-track challenge-progress" role="progressbar" aria-label="Mini-game progress" aria-valuenow="${percent}" aria-valuemin="0" aria-valuemax="100"><span style="width:${percent}%"></span></div><div class="mini-game-layout"><section class="question-card mini-question-card"><div class="mini-mode-pill" style="--game-tint:${meta.color}"><span aria-hidden="true">${meta.icon}</span>${escapeHtml(meta.name)}<span class="mini-band">${word ? escapeHtml(word.band || 'Everyday') : round.type === 'listen' ? 'LISTENING' : round.type === 'recall' ? 'RECALL' : round.id.startsWith('conversation-v1-') ? `STEP ${round.stage + 1} OF 4` : round.type === 'usage' ? 'INTERMEDIATE' : 'EVERYDAY PHRASE'}</span></div><div class="question-label">${escapeHtml(meta.label)}</div><h1>${escapeHtml(round.prompt)}</h1>${roundContent}${round.clue && !['listen', 'recall'].includes(round.type) ? `<div class="hint-line">A clue: ${escapeHtml(round.clue)}</div>${!showFeedback && round.wordId ? renderGlossLine(round.wordId) : ''}` : ''}${round.type === 'recall' ? '' : `<div class="option-list">${options}</div>`}${feedback}</section><aside class="challenge-aside"><section class="aside-card"><div class="aside-tip-icon" aria-hidden="true">✦</div><h3>${asideHeading}</h3><p>${asideDescription}</p></section><section class="aside-card"><h3>This short round</h3><div class="aside-progress-number">${session.correct}<span class="aside-denominator"> / ${session.answered}</span></div><div class="aside-progress-label">best fits so far</div><div class="mini-track"><span style="width:${session.answered ? Math.round((session.correct/session.answered)*100) : 0}%"></span></div><p style="margin-top:10px">No timer. Stop whenever you need.</p></section></aside></div></div>`;
     }
     function renderMiniSummary() {
       const session = state.miniSession;

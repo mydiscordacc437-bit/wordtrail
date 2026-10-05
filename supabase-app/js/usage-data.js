@@ -152,3 +152,32 @@ export const USAGE_ROUNDS = ROWS.flatMap((item, index) => {
     ];
   });
 });
+
+// Conversation Lab reuses the authored situations as scaffolding, but changes the
+// learner's task: recognise, interpret, edit a response, then produce the phrase.
+// IDs are versioned; a concept's next stage is chosen by the app after feedback.
+const CONVERSATION_CUES = [
+  ['A classmate asks what this action is called.', 'A friend wants a concise description of what happened.'],
+  ['Someone hears this expression and asks what it means.', 'Explain the expression to a learner in plain English.'],
+  ['A speaker needs one short, natural reply about this action.', 'Edit a short reply so its expression fits the situation.'],
+  ['A friend wants you to supply the expression yourself.', 'Write the expression you would use to describe this action.']
+];
+export const CONVERSATION_ROUNDS = USAGE_CONCEPTS.flatMap((item, index) => {
+  const peers = USAGE_CONCEPTS.filter(other => other.topic === item.topic && other.id !== item.id);
+  return CONVERSATION_CUES.flatMap(([first, second], stage) => [first, second].map((cue, variant) => {
+    const alternatives = [2, 9, 16].map(offset => peers[(index * 7 + stage * 3 + variant + offset) % peers.length]);
+    const base = { id: `conversation-v1-${item.id}-${stage}-${variant}`, conceptId: item.id, stage, scene: cue,
+      sentence: item.scene, explanation: `${item.phrase} means ${item.meaning}. In contrast, ${alternatives[0].phrase} means ${alternatives[0].meaning}.` };
+    if (stage === 0) return { ...base, type: 'dialogue', label: 'NOTICE THE ACTION', prompt: variant ? 'Which everyday expression names the action most precisely?' : 'Which expression fits what is happening?',
+      options: [item.phrase, ...alternatives.map(row => row.phrase)], answer: item.phrase };
+    if (stage === 1) return { ...base, type: 'dialogue', label: 'EXPLAIN THE MEANING', sentence: `${item.scene} Someone describes it as “${item.phrase}.”`,
+      prompt: variant ? 'What is the speaker communicating by using this expression?' : 'Which interpretation matches the expression here?',
+      options: [item.meaning, ...alternatives.map(row => row.meaning)], answer: item.meaning };
+    if (stage === 2) return { ...base, type: 'dialogue', label: 'EDIT AN EXPRESSION', sentence: `${item.scene} A draft note used “${alternatives[0].phrase},” but that names a different action.`,
+      prompt: variant ? 'Which expression should replace the draft wording?' : 'Edit the draft: which expression preserves the intended action?',
+      options: [item.phrase, ...alternatives.map(row => row.phrase)], answer: item.phrase };
+    return { ...base, type: 'recall', label: 'TYPE FROM MEMORY', sentence: `${item.scene} The key action is ____.`,
+      prompt: variant ? 'Type the expression that best names the key action.' : 'From memory, which expression fits the situation?',
+      clue: `It means ${item.meaning}.`, answer: item.phrase };
+  }));
+});
