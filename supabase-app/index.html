@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <!-- The public anon key is safe for browser use only with the RLS policies in schema.sql. Never add a service-role key here. -->
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline'; img-src 'self' data:; media-src 'self'; connect-src 'self' https://*.supabase.co wss://*.supabase.co; object-src 'none'; base-uri 'none'; form-action 'self'">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#173b32">
+  <title>Wordtrail — English vocabulary practice</title>
+  <link rel="stylesheet" href="./style.css">
+</head>
+<body>
+  <a class="skip-link" href="#main-content" data-i18n="Skip to main content">Skip to main content</a>
+  <div class="app-shell">
+    <aside class="sidebar" aria-label="Main navigation">
+      <div class="brand">
+        <div class="brand-mark" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M19.5 4.5c-6.6.1-11 2.3-12.8 6.1-1.2 2.5-.3 5.5 2 6.6 2.5 1.2 5.7-.1 7.2-2.8 1.7-3.3 1.4-7.5 3.6-9.9Z" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/><path d="M4.5 20c2.2-4.3 5.2-7 9-9" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg></div>
+        <div class="brand-name">word<span>trail</span></div>
+      </div>
+      <div class="nav-caption" data-i18n="Your space">Your space</div>
+      <nav class="nav-list" aria-label="Sections" data-nav-context="desktop">
+        <button class="nav-button active" data-view="home" aria-label="Home" data-nav-context="desktop" data-i18n-aria="Home"><span class="nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="m3.5 10 8.5-7 8.5 7"/><path d="M5.5 9.5V21h13V9.5M9 21v-7h6v7"/></svg></span><span class="nav-label" data-i18n="Home">Home</span></button>
+        <button class="nav-button" data-view="vocabulary" aria-label="Vocabulary" data-nav-context="desktop"><span class="nav-icon" aria-hidden="true">Aa</span><span class="nav-label">Vocabulary</span></button>
+        <button class="nav-button" data-view="games" aria-label="Practice" data-nav-context="desktop" data-i18n-aria="Practice"><span class="nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M8 5h8a5 5 0 0 1 4.8 6.4l-1.1 4.1a2.6 2.6 0 0 1-4.3 1.2L13.5 15h-3l-1.9 1.7a2.6 2.6 0 0 1-4.3-1.2l-1.1-4.1A5 5 0 0 1 8 5Z"/><path d="M7.5 9v4M5.5 11h4M16.5 10h.01M18.5 12.5h.01"/></svg></span><span class="nav-label" data-i18n="Practice">Practice</span></button>
+        <button class="nav-button" data-view="explore" aria-label="Explore worlds" data-nav-context="desktop" data-i18n-aria="Explore worlds"><span class="nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="m3 6 6-3 6 3 6-3v15l-6 3-6-3-6 3z"/><path d="M9 3v15M15 6v15"/></svg></span><span class="nav-label" data-i18n="Explore worlds">Explore worlds</span></button>
+        <button class="nav-button" data-view="nuance" aria-label="Nuance lab" data-nav-context="desktop" data-i18n-aria="Nuance lab"><span class="nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 3.5 14.1 9l5.9.5-4.5 3.8 1.4 5.8-4.9-3.1-5 3.1 1.5-5.8L4 9.5 10 9z"/><path d="M19 16.5 20 19l2.5 1-2.5 1-1 2.5-1-2.5-2.5-1 2.5-1z"/></svg></span><span class="nav-label" data-i18n="Nuance lab">Nuance lab</span></button>
+<button class="nav-button" data-view="academy" aria-label="Academy" data-nav-context="desktop" data-i18n-aria="Academy"><span class="nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="m2.5 9 9.5-5 9.5 5-9.5 5-9.5-5Z"/><path d="M6 11v5c3.7 2.4 8.3 2.4 12 0v-5M12 14v6"/></svg></span><span class="nav-label" data-i18n="Academy">Academy</span></button>
+
+        <button class="nav-button" data-view="wordbook" aria-label="My wordbook" data-nav-context="desktop" data-i18n-aria="My wordbook"><span class="nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M5 4.5A2.5 2.5 0 0 1 7.5 2H20v17H7.5A2.5 2.5 0 0 0 5 21.5z"/><path d="M5 4.5v17M8.5 6H16M8.5 10H16"/></svg></span><span class="nav-label" data-i18n="My wordbook">My wordbook</span></button>
+      </nav>
+      <div class="sidebar-spacer"></div>
+      <div class="sidebar-journey">
+        <div class="journey-top"><span data-i18n="YOUR STREAK">YOUR STREAK</span><span class="journey-flame">✦</span></div>
+        <div class="journey-count"><span id="sidebar-streak">0</span> <span data-i18n="days">days</span></div>
+        <div class="journey-caption">A gentle record of your practice. Your progress stays, even when you take a break.</div>
+      </div>
+      <div class="sidebar-bottom">Every round is optional.<br />Your pace is yours.</div>
+    </aside>
+    <div class="main-column">
+      <header class="topbar">
+        <span class="topbar-label">WORDTRAIL<span class="topbar-label-separator"> · ENGLISH</span></span>
+        <div class="topbar-tools">
+          <details class="quick-settings" id="quick-settings"><summary data-i18n="Settings" aria-label="Open settings" data-i18n-aria="Settings">Settings</summary>
+            <div class="settings-panel" aria-label="Learning and display settings">
+              <label><span data-i18n="App language">Interface language</span><select id="ui-language-select" aria-label="App language" data-i18n-aria="App language"><option value="en">English</option><option value="es">Español</option><option value="hi">हिन्दी</option><option value="bn">বাংলা</option><option value="fr">Français</option></select><small class="settings-help" data-i18n="App instructions and controls">App instructions and controls</small></label>
+              <label><span data-i18n="Word hints &amp; pronunciation">Gloss &amp; speech language</span><select id="gloss-language-select" aria-label="Word hints and pronunciation language" data-i18n-aria="Word hints &amp; pronunciation"><option value="en" data-i18n="English (no extra word meanings)">English (no extra word meanings)</option><option value="es">Español</option><option value="hi">हिन्दी</option><option value="bn">বাংলা</option><option value="fr">Français</option></select><small class="settings-help" data-i18n="Language for optional word meanings and their speech">Language for optional word meanings and their speech</small></label>
+              <label class="settings-check"><input id="gloss-toggle" type="checkbox"><span data-i18n="Show optional word meanings">Show optional word meanings</span></label>
+              <div class="settings-actions"><button class="btn btn-outline btn-small" id="theme-toggle" data-action="toggle-theme" aria-pressed="false">Dark theme</button><button class="btn btn-outline btn-small" id="sound-toggle" data-action="toggle-sound" aria-pressed="false">Answer sounds: off</button></div>
+            </div>
+          </details>
+          <label class="accent-control" for="accent-select"><span class="accent-control-label" data-i18n="English voice">EN VOICE</span><select id="accent-select" aria-label="English pronunciation accent" data-i18n-aria="English pronunciation accent"><option value="en-US">US English</option><option value="en-GB">UK English</option><option value="en-AU">Australian English</option><option value="en-IN">Indian English</option><option value="en-CA">Canadian English</option><option value="en-IE">Irish English</option></select></label>
+          <button class="level-switch" data-action="change-level" aria-label="Change your starting level" data-i18n-aria="Change your starting level"><span id="level-switch-label">Choose level</span><span aria-hidden="true">⌄</span></button>
+          <button class="auth-button" id="auth-button" type="button" aria-label="Account: guest mode" aria-haspopup="dialog">G</button>
+        </div>
+      </header>
+      <main id="main-content" tabindex="-1"></main>
+    </div>
+    <nav class="mobile-nav" aria-label="Mobile navigation" data-nav-context="mobile">
+      <button class="nav-button active" data-view="home" aria-label="Home" data-nav-context="mobile" data-i18n-aria="Home"><span class="nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="m3.5 10 8.5-7 8.5 7"/><path d="M5.5 9.5V21h13V9.5M9 21v-7h6v7"/></svg></span><span class="nav-label" data-i18n="Home">Home</span></button>
+      <button class="nav-button" data-view="vocabulary" aria-label="Vocabulary" data-nav-context="mobile"><span class="nav-icon" aria-hidden="true">Aa</span><span class="nav-label">Vocabulary</span></button>
+        <button class="nav-button" data-view="games" aria-label="Practice" data-nav-context="mobile" data-i18n-aria="Practice"><span class="nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M8 5h8a5 5 0 0 1 4.8 6.4l-1.1 4.1a2.6 2.6 0 0 1-4.3 1.2L13.5 15h-3l-1.9 1.7a2.6 2.6 0 0 1-4.3-1.2l-1.1-4.1A5 5 0 0 1 8 5Z"/><path d="M7.5 9v4M5.5 11h4M16.5 10h.01M18.5 12.5h.01"/></svg></span><span class="nav-label" data-i18n="Practice">Practice</span></button>
+      <button class="nav-button" data-view="explore" aria-label="Explore worlds" data-nav-context="mobile" data-i18n-aria="Explore worlds"><span class="nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="m3 6 6-3 6 3 6-3v15l-6 3-6-3-6 3z"/><path d="M9 3v15M15 6v15"/></svg></span><span class="nav-label" data-i18n="Worlds">Worlds</span></button>
+      <button class="nav-button" data-view="nuance" aria-label="Nuance lab" data-nav-context="mobile" data-i18n-aria="Nuance lab"><span class="nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 3.5 14.1 9l5.9.5-4.5 3.8 1.4 5.8-4.9-3.1-5 3.1 1.5-5.8L4 9.5 10 9z"/><path d="M19 16.5 20 19l2.5 1-2.5 1-1 2.5-1-2.5-2.5-1 2.5-1z"/></svg></span><span class="nav-label" data-i18n="Nuance lab">Nuance</span></button>
+<button class="nav-button" data-view="academy" aria-label="Academy" data-nav-context="mobile" data-i18n-aria="Academy"><span class="nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="m2.5 9 9.5-5 9.5 5-9.5 5-9.5-5Z"/><path d="M6 11v5c3.7 2.4 8.3 2.4 12 0v-5M12 14v6"/></svg></span><span class="nav-label" data-i18n="Academy">Academy</span></button>
+
+    </nav>
+  </div>
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+  <dialog class="auth-dialog" id="auth-dialog" aria-labelledby="auth-title">
+    <form class="auth-form" id="auth-form">
+      <div class="auth-dialog-heading"><div><div class="eyebrow">WORDTRAIL ACCOUNT</div><h2 id="auth-title">Save your trail</h2></div><button class="auth-close" id="auth-close" type="button" aria-label="Close sign-in dialog">×</button></div>
+      <p class="auth-description" id="auth-description">Sign in to sync your profile, streak, quiz scores, and wordbook. Guest play stays on this device.</p>
+      <label for="auth-email">Email address</label><input id="auth-email" type="email" autocomplete="email" maxlength="254" required>
+      <label for="auth-password">Password</label><input id="auth-password" type="password" autocomplete="current-password" minlength="8" maxlength="128" required>
+      <label for="auth-username">Display name <span class="auth-optional">(for new accounts)</span></label><input id="auth-username" type="text" autocomplete="nickname" maxlength="40">
+      <label class="auth-sync-option"><input id="sync-guest" type="checkbox" checked><span>Sync this browser’s guest progress to my account</span></label>
+      <div class="auth-actions"><button class="btn btn-primary btn-small" id="auth-signin" type="submit">Sign in</button><button class="btn btn-outline btn-small" id="auth-signup" type="button">Create account</button><button class="btn btn-outline btn-small" id="auth-sync-now" type="button" hidden>Sync guest data</button><button class="btn btn-quiet btn-small" id="auth-signout" type="button" hidden>Sign out</button></div>
+      <p class="auth-message" id="auth-message" role="status" aria-live="polite"></p>
+      <p class="auth-config-note" id="auth-config-note">Cloud is optional. Add your Supabase project URL and public anon key in js/config.js to enable accounts.</p>
+    </form>
+  </dialog>
+  <script type="module" src="./js/app.js"></script>
+</body>
+</html>
