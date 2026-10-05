@@ -83,6 +83,6 @@ Main render functions in `app.js`: renderHome, renderGames, renderExplore, rende
 
 ## 8. Subsequent work
 - Academy currently displays only Class 8; content for Classes 6, 7, 9 and 10 remains available in the code for a future release.
-- Practice uses bounded per-browser/account question rotation. Usage Studio adds 1,000 stable tasks from 125 authored everyday expressions, with versioned IDs and a five-turn, no-repeat-concept selector. See `PRACTICE_DESIGN.md` for the scope and limitations (the eight tasks per concept reuse one authored situation).
+- Practice uses bounded per-browser/account question rotation. The opening path is now level-specific and ordered: four starter questions, then three guided lessons, with a missed/due word revisited before advancing. Once the guided path is done, scene rounds rotate by setting and rise in difficulty. Usage Studio adds 1,000 stable tasks from 125 authored everyday expressions, with versioned IDs and a five-turn, no-repeat-concept selector. See `PRACTICE_DESIGN.md` for the scope and limitations (the eight tasks per concept reuse one authored situation).
 - Run `node tests/usage-data-smoke.mjs` alongside the three existing smoke checks after changing the practice bank. Keep the standalone embedded rows and `supabase-app/js/usage-data.js` in sync.
 - Browser, accessibility and editorial reviews are still needed; cloud authentication remains unconfigured without the user's Supabase public project configuration.

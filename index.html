@@ -1832,11 +1832,47 @@ body.dark-theme .week-card .eyebrow { color: var(--text-muted); }
     };
 
     const STARTER_PATHS = {
-      beginner: { env: 'home', goal: 'everyday feelings and familiar moments', ids: ['tired', 'kind', 'happy', 'comfortable'] },
-      intermediate: { env: 'market', goal: 'prices, manners, and practical choices', ids: ['affordable', 'reasonable', 'fresh', 'polite'] },
-      advanced: { env: 'workplace', goal: 'precise and tactful choices at work', ids: ['diplomatic', 'reliable', 'practical', 'composed'] },
-      unsure: { env: 'home', goal: 'familiar words with clear clues', ids: ['kind', 'tired', 'happy', 'comfortable'] }
+      beginner: { env: 'home', goal: 'familiar words, then describing a real situation', ids: ['tired', 'messy', 'comfortable', 'cozy'] },
+      intermediate: { env: 'market', goal: 'prices, observation and precise choices', ids: ['affordable', 'reasonable', 'inspect', 'bustling'] },
+      advanced: { env: 'workplace', goal: 'precision and tact under pressure', ids: ['reliable', 'practical', 'composed', 'diplomatic'] },
+      unsure: { env: 'home', goal: 'familiar moments followed by richer descriptions', ids: ['kind', 'messy', 'comfortable', 'cozy'] }
     };
+    // Explicit ordered pathways. Progress is inferred from explored IDs so older
+    // local saves need no migration; due/missed words get priority within each step.
+    const GUIDED_PATHS = {
+      beginner: [
+        { env: 'campus', ids: ['helpful', 'quiet', 'clear', 'confident', 'curious'] },
+        { env: 'market', ids: ['fresh', 'polite', 'affordable', 'reasonable', 'inspect'] },
+        { env: 'travel', ids: ['early', 'nearby', 'safe', 'frequent', 'detour'] }
+      ],
+      intermediate: [
+        { env: 'campus', ids: ['confident', 'curious', 'puzzled', 'accurate', 'concise'] },
+        { env: 'workplace', ids: ['available', 'organized', 'patient', 'reliable', 'composed'] },
+        { env: 'travel', ids: ['nearby', 'frequent', 'detour', 'hospitable', 'serene'] }
+      ],
+      advanced: [
+        { env: 'campus', ids: ['confident', 'curious', 'puzzled', 'accurate', 'concise'] },
+        { env: 'market', ids: ['affordable', 'ripe', 'reasonable', 'inspect', 'bustling'] },
+        { env: 'travel', ids: ['safe', 'frequent', 'detour', 'hospitable', 'serene'] }
+      ],
+      unsure: [
+        { env: 'campus', ids: ['helpful', 'quiet', 'clear', 'confident', 'curious'] },
+        { env: 'market', ids: ['fresh', 'polite', 'affordable', 'reasonable', 'inspect'] },
+        { env: 'travel', ids: ['early', 'nearby', 'safe', 'frequent', 'detour'] }
+      ]
+    };
+    // Within unplanned scene sessions, start accessible and build to a nuanced word.
+    const SCENE_DIFFICULTY = {
+      beginner: new Set(['tired','kind','happy','hot','early','easy','fresh','helpful','quiet','polite','nearby','safe','quick','open','full']),
+      challenging: new Set(['cozy','sturdy','reasonable','inspect','curious','confident','reliable','accurate','puzzled','practical','composed','frequent','detour','hospitable','serene','concise','diplomatic','frugal','bustling','murmured'])
+    };
+    function sceneDifficulty(question) {
+      return SCENE_DIFFICULTY.beginner.has(question.id) ? 1 : SCENE_DIFFICULTY.challenging.has(question.id) ? 3 : 2;
+    }
+    function orderSceneQuestions(questions) {
+      // Stable tie order comes from rotation; only the difficulty ramp is fixed.
+      return questions.slice().sort((a, b) => sceneDifficulty(a) - sceneDifficulty(b));
+    }
     const REVIEW_INTERVAL_DAYS = [1, 3, 7, 14, 30];
                 // Original Academy practice content for the 2026 general Bangla-medium scope.
     // Textbook titles and unit maps are study references; answers and tests here are original practice, not official papers.
@@ -2174,7 +2210,7 @@ body.dark-theme .week-card .eyebrow { color: var(--text-muted); }
       Object.values(value).forEach(child => deepFreeze(child, seen));
       return value;
     }
-    deepFreeze([ENVIRONMENTS, QUESTIONS, RELATED_WORDS, ANTONYMS, SYNONYM_ROUNDS, ANTONYM_ROUNDS, PHRASE_ROUNDS, STORY_ROUNDS, LISTEN_ROUNDS, USAGE_CONCEPTS, USAGE_ROUNDS, NUANCE_SETS, TONE_SCENARIOS, QUESTION_BY_ID, ROUND_BY_ID, GAME_INFO, LEVELS, ACCENT_OPTIONS, UI_TRANSLATIONS, ONBOARDING_LANGUAGES, WORD_GLOSSES, STARTER_PATHS, REVIEW_INTERVAL_DAYS, DEFAULT_PROGRESS, ACADEMY_CONTENT]);
+    deepFreeze([ENVIRONMENTS, QUESTIONS, RELATED_WORDS, ANTONYMS, SYNONYM_ROUNDS, ANTONYM_ROUNDS, PHRASE_ROUNDS, STORY_ROUNDS, LISTEN_ROUNDS, USAGE_CONCEPTS, USAGE_ROUNDS, NUANCE_SETS, TONE_SCENARIOS, QUESTION_BY_ID, ROUND_BY_ID, GAME_INFO, LEVELS, ACCENT_OPTIONS, UI_TRANSLATIONS, ONBOARDING_LANGUAGES, WORD_GLOSSES, STARTER_PATHS, GUIDED_PATHS, SCENE_DIFFICULTY, REVIEW_INTERVAL_DAYS, DEFAULT_PROGRESS, ACADEMY_CONTENT]);
     const loadedProgress = loadProgress();
     const recoveredSession = loadActiveSession();
     const state = {
@@ -2777,9 +2813,12 @@ body.dark-theme .week-card .eyebrow { color: var(--text-muted); }
       if (!['starter', 'daily', 'environment', 'review'].includes(mode)) return;
       let questions;
       if (mode === 'starter') questions = (ids || []).map(id => hasOwn(QUESTION_BY_ID, id) ? QUESTION_BY_ID[id] : null).filter(Boolean);
-      else if (mode === 'environment') questions = sampleForLevel(getEnvironmentQuestions(envId), 5, state.progress.level, `environment-${envId}`);
+      else if (mode === 'environment') {
+        const planned = Array.isArray(ids) ? ids.map(id => QUESTION_BY_ID[id]).filter(question => question && question.env === envId).slice(0, 5) : [];
+        questions = planned.length ? planned : orderSceneQuestions(sampleForLevel(getEnvironmentQuestions(envId), 5, state.progress.level, `environment-${envId}`));
+      }
       else if (mode === 'review') questions = (ids || getReviewIds()).map(id => hasOwn(QUESTION_BY_ID, id) ? QUESTION_BY_ID[id] : null).filter(Boolean).slice(0, 5);
-      else questions = sampleForLevel(everydayQuestions(), 5, state.progress.level, 'daily-scene');
+      else questions = orderSceneQuestions(sampleForLevel(everydayQuestions(), 5, state.progress.level, 'daily-scene'));
       if (!questions.length) questions = sampleForLevel(everydayQuestions(), Math.min(5, everydayQuestions().length), state.progress.level, 'fallback-scene');
       questions = questions.map(question => ({ ...question, options: shuffled(question.options) }));
       state.session = { mode, envId, questions, index: 0, correct: 0, answered: 0, choice: null, showingFeedback: false, missedIds: [], finished: false };
@@ -2830,10 +2869,35 @@ body.dark-theme .week-card .eyebrow { color: var(--text-muted); }
       const path = STARTER_PATHS[level];
       startSession('starter', path.env, path.ids);
     }
+    function recommendedLesson(level = state.progress.level || 'beginner') {
+      const steps = GUIDED_PATHS[level] || GUIDED_PATHS.beginner;
+      const explored = new Set(state.progress.exploredIds);
+      const due = new Set(dueReviewIds());
+      const starter = STARTER_PATHS[level] || STARTER_PATHS.beginner;
+      const starterDue = starter.ids.filter(id => due.has(id));
+      if (starterDue.length) {
+        const support = starter.ids.filter(id => !due.has(id));
+        const extra = questionPoolForLevel(getEnvironmentQuestions(starter.env), level)
+          .filter(question => !starter.ids.includes(question.id));
+        return { env: starter.env, ids: [...starterDue, ...support, ...extra.map(question => question.id)].slice(0, 5), phase: 1, total: steps.length + 1,
+          goal: 'a quick revisit before the next guided lesson' };
+      }
+      for (const step of steps) {
+        if (step.ids.every(id => explored.has(id)) && !step.ids.some(id => due.has(id))) continue;
+        const missed = step.ids.filter(id => due.has(id));
+        const newIds = step.ids.filter(id => !explored.has(id) && !due.has(id));
+        const practiced = step.ids.filter(id => explored.has(id) && !due.has(id));
+        // Due words open the round; the remaining tasks rise in curated order.
+        const ids = [...missed, ...newIds, ...practiced].slice(0, 5);
+        return { env: step.env, ids, phase: steps.indexOf(step) + 2, total: steps.length + 1, goal: 'a guided series from familiar clues to precise choices' };
+      }
+      // After the pathway, rotate environments instead of looping on the starter.
+      const worlds = ['home', 'campus', 'market', 'workplace', 'travel'];
+      return { env: worlds[(state.progress.gameRuns.scene || 0) % worlds.length], ids: null, goal: 'a varied next step at your level' };
+    }
     function startRecommendedLesson() {
-      const level = state.progress.level || 'beginner';
-      const path = STARTER_PATHS[level] || STARTER_PATHS.beginner;
-      startSession('environment', path.env);
+      const next = recommendedLesson();
+      startSession('environment', next.env, next.ids);
     }
     function makeSceneMiniRound(question) {
       const env = getEnvironment(question.env);
@@ -3169,7 +3233,7 @@ body.dark-theme .week-card .eyebrow { color: var(--text-muted); }
       const resume = Boolean(activeMini || activeScene || activeTone);
       const resumeMini = Boolean(activeMini);
       const level = LEVELS[state.progress.level] || LEVELS.beginner;
-      const path = STARTER_PATHS[state.progress.level] || STARTER_PATHS.beginner;
+      const path = recommendedLesson();
       const env = getEnvironment(path.env);
       const resumeName = resumeMini ? (state.miniSession.mode === 'daily' ? 'your four-part sampler' : state.miniSession.mode === 'review' ? 'your word review' : `your ${GAME_INFO[state.miniSession.mode]?.name || 'practice'} round`) : state.session ? (state.session.mode === 'environment' || state.session.mode === 'starter' ? `your ${getEnvironment(state.session.envId).name} round` : 'your scene round') : 'your Tone Shift round';
       const levelDescription = state.progress.level === 'unsure' ? 'beginner-friendly' : level.label.toLowerCase();
@@ -3180,7 +3244,7 @@ body.dark-theme .week-card .eyebrow { color: var(--text-muted); }
       return `<div class="page home-page">
         <div class="welcome-row"><div><div class="eyebrow">${greeting} · ${formatDate()}</div><h1>English for everyday moments.</h1><p>Learn common words through short situations, and see when similar words do not quite fit.</p></div><div class="day-pill"><span class="dot"></span>${escapeHtml(levelBadge)}</div></div>
         <section class="hero-card" aria-label="Your recommended next lesson">
-          <div class="hero-copy"><div class="hero-tag">${resume ? 'ROUND IN PROGRESS' : 'YOUR NEXT SHORT ROUND'}</div><h2>${resume ? 'Continue when you’re ready.' : `Start with ${escapeHtml(env.name)}.`}</h2><p>${description}</p><button class="btn btn-primary" data-action="${resume ? 'resume-session' : 'start-recommended'}">${resume ? 'Continue this round' : 'Start a 5-question lesson'} ${iconArrow()}</button><button class="hero-secondary" data-view="games">Choose a different activity</button><div class="gentle-note">${gentleNote}</div></div>
+          <div class="hero-copy"><div class="hero-tag">${resume ? 'ROUND IN PROGRESS' : path.phase ? `GUIDED LESSON ${path.phase} OF ${path.total}` : 'VARIED PRACTICE'}</div><h2>${resume ? 'Continue when you’re ready.' : `Start with ${escapeHtml(env.name)}.`}</h2><p>${description}</p><button class="btn btn-primary" data-action="${resume ? 'resume-session' : 'start-recommended'}">${resume ? 'Continue this round' : 'Start a 5-question lesson'} ${iconArrow()}</button><button class="hero-secondary" data-view="games">Choose a different activity</button><div class="gentle-note">${gentleNote}</div></div>
           <div class="hero-art lesson-steps" aria-label="Read a scene, choose a word, learn why it fits"><div class="lesson-step"><span>1</span>Read a scene</div><div class="lesson-connector" aria-hidden="true"></div><div class="lesson-step"><span>2</span>Choose a word</div><div class="lesson-connector" aria-hidden="true"></div><div class="lesson-step"><span>3</span>See why it fits</div></div>
         </section>
         <div class="stats-grid" aria-label="Your learning statistics">

@@ -11,7 +11,7 @@ Then visit `http://localhost:4173`.
 ## What’s inside
 
 - First-use self-assessment: beginner, intermediate, advanced, or not sure; the starting level can be changed later
-- A short starter round matched to the learner’s chosen level and setting
+- A short, ordered starter round matched to the learner’s chosen level, followed by three guided five-question lessons that build from familiar clues to nuanced choices; due/missed words get a revisit before advancing, without timers or a locked path
 - Five context worlds with **50 scene cards** (10 per setting)
 - Clearly labeled practice goals: choosing from context, near-synonyms, opposites, common phrases, listening, and short stories
 - **Synonym Switch**, **Opposite Snap**, **Phrase Finder**, **Listen & Match**, **Story Clues**, **Recall & Type** (no answer choices), and **Usage Studio** (1,000 distinct tasks across 125 common expressions), plus a four-turn mixed sampler that varies its skills and order across sessions

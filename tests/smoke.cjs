@@ -309,7 +309,7 @@ assert.equal(value('state.session.mode'), 'starter');
 assert.equal(value('state.session.questions.length'), 4);
 assert.equal(value('state.session.questions[0].options.indexOf(state.session.questions[0].answer)'), 3, 'Correct scene choice is shuffled away from A for a deterministic shuffle');
 assert.equal(value('state.session.envId'), 'home');
-assert.equal(value("state.session.questions.map(question => question.id).join(',')"), 'tired,kind,happy,comfortable');
+assert.equal(value("state.session.questions.map(question => question.id).join(',')"), 'tired,messy,comfortable,cozy');
 assert.match(main.innerHTML, /Beginner · Home &amp; friends/);
 assert.match(main.innerHTML, /Scene 1 of 4/);
 for (let i = 0; i < 4; i += 1) {
@@ -332,11 +332,12 @@ assert.equal(value('state.progress.totalAnswered'), 4);
 assert.equal(value('state.progress.gameRuns.scene'), 1);
 assert.ok(!bodyClasses.has('onboarding-mode'));
 click({ view: 'home' });
-assert.match(main.innerHTML, /Start with Home &amp; friends/);
+assert.match(main.innerHTML, /Start with Campus/);
 click({ action: 'start-recommended' });
 assert.equal(value('state.session.mode'), 'environment');
-assert.equal(value('state.session.envId'), 'home');
+assert.equal(value('state.session.envId'), 'campus');
 assert.equal(value('state.session.questions.length'), 5);
+assert.equal(value("state.session.questions.map(question => question.id).join(',')"), 'helpful,quiet,clear,confident,curious', 'Guided round follows the starter in curated order');
 click({ view: 'games' });
 click({ action: 'start-mini', data: { game: 'story' } });
 assert.equal(value("state.miniSession.rounds.every(round => !round.wordId || QUESTION_BY_ID[round.wordId].band !== 'Stretch')"), true, 'Beginner story rounds avoid stretch vocabulary');
@@ -932,6 +933,37 @@ resetUsage: {
   value("startMiniGame('usage')");
   assert.equal(value('state.miniSession.rounds.length'), 5, 'After exhausting the pool, new rounds remain available');
 }
+
+// Guided lesson selection is ordered, level-specific, resumable and sensitive to due words.
+assert.equal(value("Object.entries(GUIDED_PATHS).every(([level, steps]) => steps.every(step => step.ids.length === 5 && step.ids.every(id => QUESTION_BY_ID[id]?.env === step.env) && step.ids.every((id, i) => !i || sceneDifficulty(QUESTION_BY_ID[step.ids[i - 1]]) <= sceneDifficulty(QUESTION_BY_ID[id]))))"), true, 'Each curated lesson ramps difficulty without crossing settings');
+assert.equal(value("Object.values(STARTER_PATHS).every(path => path.ids.every((id, i) => !i || sceneDifficulty(QUESTION_BY_ID[path.ids[i - 1]]) <= sceneDifficulty(QUESTION_BY_ID[id])))"), true, 'Starters grow steadily harder within each selected level');
+const guidedCases = value(`(() => {
+  const previous = state.progress;
+  state.progress = { ...previous, level: 'beginner', exploredIds: STARTER_PATHS.beginner.ids.slice(), missedIds: [], reviewSchedule: {}, gameRuns: { scene: 1 } };
+  try {
+    state.progress.reviewSchedule.messy = { stage: 0, dueAt: 1, correctCount: 0, lapses: 1, lastReviewedAt: 1 };
+    const starterReview = recommendedLesson();
+    delete state.progress.reviewSchedule.messy;
+    const first = recommendedLesson();
+    state.progress.exploredIds.push(...first.ids);
+    const second = recommendedLesson();
+    state.progress.reviewSchedule.helpful = { stage: 0, dueAt: 1, correctCount: 0, lapses: 1, lastReviewedAt: 1 };
+    const remediation = recommendedLesson();
+    for (const id of GUIDED_PATHS.beginner[0].ids) state.progress.reviewSchedule[id] = { stage: 0, dueAt: 1, correctCount: 0, lapses: 1, lastReviewedAt: 1 };
+    const fullReview = recommendedLesson();
+    for (const id of GUIDED_PATHS.beginner[0].ids) delete state.progress.reviewSchedule[id];
+    state.progress.exploredIds.push(...GUIDED_PATHS.beginner.flatMap(step => step.ids));
+    const after = recommendedLesson();
+    return { starterReview: starterReview.env + ':' + starterReview.ids[0], first: first.env + ':' + first.phase, second: second.env + ':' + second.phase,
+      remediation: remediation.ids[0], fullReview: fullReview.ids.length, after: after.phase || null };
+  } finally { state.progress = previous; }
+})()`);
+assert.equal(guidedCases.starterReview, 'home:messy', 'A missed starter word comes before Lesson 2');
+assert.equal(guidedCases.first, 'campus:2');
+assert.equal(guidedCases.second, 'market:3');
+assert.equal(guidedCases.remediation, 'helpful', 'A due word from an earlier lesson is revisited before advancing');
+assert.equal(guidedCases.fullReview, 5, 'Multiple misses still produce a complete five-question review round');
+assert.equal(guidedCases.after, null, 'After the pathway, the learner enters varied practice');
 
 console.log('Wordtrail smoke tests passed: randomized choices, CSP/sanitizer guards, secure storage validation, onboarding, all practice modes, speech fallbacks, backup/restore, and reload recovery.');
 })().catch(error => {
