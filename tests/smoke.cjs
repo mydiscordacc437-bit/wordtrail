@@ -157,7 +157,7 @@ const sandbox = {
   console
 };
 vm.createContext(sandbox);
-const testOnlyScript = match[1].replace('    initializeSpeechVoices();\n    render();\n    })();', '    initializeSpeechVoices();\n    render();\n    globalThis.__wordtrailTest = { evaluate(expression) { return eval(expression); } };\n    })();');
+const testOnlyScript = match[1].replace(/    initializeSpeechVoices\(\);\r?\n    render\(\);\r?\n    \}\)\(\);/, '    initializeSpeechVoices();\n    render();\n    globalThis.__wordtrailTest = { evaluate(expression) { return eval(expression); } };\n    })();');
 assert.notEqual(testOnlyScript, match[1], 'Test-only bridge is injected without exposing application state in production');
 vm.runInContext(testOnlyScript, sandbox, { filename: 'wordtrail-inline.js' });
 const vmMath = vm.runInContext('Math', sandbox);
